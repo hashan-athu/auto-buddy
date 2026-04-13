@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #000;
+  color: #fff;
+  overflow: hidden; /* For full screen 3D canvas */
+}
+
+/* Custom Utilities for the Awakening Phase */
+.awaken-blur {
+  filter: blur(10px);
+  transition: filter 3s ease-out;
+}
+.awaken-clear {
+  filter: blur(0px);
+  transition: filter 3s ease-out;
+}
