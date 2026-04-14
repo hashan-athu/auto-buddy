@@ -15,18 +15,18 @@ export const MOCK_DATA = {
     interactiveNodes: [
       {
         id: "tyre_front_left",
-        position: [1.2, 0.4, 2.0], // Relative to the 3D car's center
+        position: [1.0, 0.3, 1.4], // Wider and lower to sit on the tyre surface
         title: "Tyre Status (Front Left)",
         data: {
           lastReplaced: "2025-01-10",
-          healthColor: "text-green-500", // Tailwind color
+          healthColor: "text-green-500",
           expectedChange: "2026-01-10",
           pressure: "34 psi"
         }
       },
       {
         id: "engine_bay",
-        position: [0, 1.0, 2.5],
+        position: [0, 0.8, 1.5], // Lowered to sit on the hood surface
         title: "Engine Bay",
         data: {
           lastReplaced: "N/A",
@@ -37,7 +37,7 @@ export const MOCK_DATA = {
       },
       {
         id: "brake_pads",
-        position: [-1.2, 0.4, -1.8],
+        position: [-1.0, 0.3, -1.2], // Wider and lower for rear right area
         title: "Rear Right Brakes",
         data: {
           lastReplaced: "2024-05-15",

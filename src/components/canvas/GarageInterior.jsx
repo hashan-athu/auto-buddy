@@ -1,53 +1,68 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
+import { OrbitControls, Environment, useGLTF } from '@react-three/drei';
 import VehicleModel from './VehicleModel';
+
+// Assets
+import interiorModelUrl from '../../assets/models/buildings/garage_nfs_2015.glb?url';
+
+function InteriorModel() {
+  const { scene } = useGLTF(interiorModelUrl);
+  
+  useEffect(() => {
+    scene.traverse((node) => {
+      if (node.isMesh) {
+        node.receiveShadow = true;
+        node.castShadow = false; // Interior structure usually doesn't cast shadows unless specifically needed
+      }
+    });
+  }, [scene]);
+
+  return <primitive object={scene} scale={[50, 50, 50]} position={[0, -0.05, 0]} />;
+}
 
 export default function GarageInterior() {
   const [lightsSeq, setLightsSeq] = useState(0);
 
   useEffect(() => {
-    // Sequence 5 ceiling floodlights turning on one by one
     const timers = [];
     for (let i = 1; i <= 5; i++) {
-      timers.push(setTimeout(() => setLightsSeq(i), i * 300));
+      timers.push(setTimeout(() => setLightsSeq(i), i * 350));
     }
     return () => timers.forEach(clearTimeout);
   }, []);
 
   return (
-    <Canvas camera={{ position: [4, 2, 4], fov: 50 }}>
-      {/* Environment & Floor */}
-      <color attach="background" args={['#020202']} />
-      <fog attach="fog" args={['#020202', 10, 30]} />
+    <Canvas shadows camera={{ position: [4, 2, 4], fov: 45 }}>
+      <color attach="background" args={['#010101']} />
+      <fog attach="fog" args={['#010101', 5, 25]} />
       
-      {/* Concrete Floor with reflectiveness using ContactShadows as a proxy or just standard mesh */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
-        <planeGeometry args={[50, 50]} />
-        <meshStandardMaterial color="#111" roughness={0.4} metalness={0.1} />
-      </mesh>
-      
-      {/* High-quality shadow for the vehicle */}
-      <ContactShadows resolution={1024} scale={10} blur={2} opacity={0.5} far={1} color="#000000" />
+      <Suspense fallback={null}>
+        <InteriorModel />
 
-      {/* Sequenced Ceiling Lights */}
-      {lightsSeq >= 1 && <spotLight position={[0, 8, 4]} intensity={2} angle={0.6} penumbra={0.5} color="#fff" castShadow />}
-      {lightsSeq >= 2 && <spotLight position={[-4, 8, 2]} intensity={2} angle={0.6} penumbra={0.5} color="#fff" />}
-      {lightsSeq >= 3 && <spotLight position={[4, 8, 2]} intensity={2} angle={0.6} penumbra={0.5} color="#fff" />}
-      {lightsSeq >= 4 && <spotLight position={[-4, 8, -2]} intensity={2} angle={0.6} penumbra={0.5} color="#fff" />}
-      {lightsSeq >= 5 && <spotLight position={[4, 8, -2]} intensity={2} angle={0.6} penumbra={0.5} color="#fff" />}
-      
-      {/* Ambient fallback */}
-      <ambientLight intensity={0.2} />
+        {/* Sequenced Strategic Ceiling Spotlights - Boosted Intensities */}
+        {lightsSeq >= 1 && <spotLight position={[0, 4, 3]} intensity={40} angle={0.6} penumbra={0.5} castShadow color="#ffffff" />}
+        {lightsSeq >= 2 && <spotLight position={[-2, 4, 0]} intensity={25} angle={0.6} penumbra={0.5} color="#ffffff" />}
+        {lightsSeq >= 3 && <spotLight position={[2, 4, 0]} intensity={25} angle={0.6} penumbra={0.5} color="#ffffff" />}
+        {lightsSeq >= 4 && <spotLight position={[-2, 4, -3]} intensity={25} angle={0.6} penumbra={0.5} color="#ffffff" />}
+        {lightsSeq >= 5 && <spotLight position={[2, 4, -3]} intensity={25} angle={0.6} penumbra={0.5} color="#ffffff" />}
+        
+        <ambientLight intensity={0.6} />
+        
+        <VehicleModel />
 
-      <VehicleModel />
-
-      <OrbitControls 
-        enablePan={false}
-        minDistance={2}
-        maxDistance={8}
-        maxPolarAngle={Math.PI / 2 - 0.05} // Prevent going below floor
-      />
+        <OrbitControls 
+          enablePan={false}
+          minDistance={1.5}
+          maxDistance={10}
+          maxPolarAngle={Math.PI / 2 - 0.1}
+          makeDefault
+        />
+        
+        {/* Adds subtle reflections to metallic surfaces */}
+        <Environment preset="city" blur={0.8} opacity={1} />
+      </Suspense>
     </Canvas>
   );
 }
+
