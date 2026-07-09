@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MOCK_DATA } from '../../constants/const';
+import { useLogin } from '../../api/auth';
 import { useAppStore } from '../../store/useAppStore';
 
 export default function LoginModal({ isOpen, onClose }) {
@@ -8,16 +8,24 @@ export default function LoginModal({ isOpen, onClose }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { unlockGarage } = useAppStore();
+  const login = useLogin();
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (username === MOCK_DATA.user.username && password === MOCK_DATA.user.password) {
-      setError('');
-      unlockGarage();
-      onClose();
-    } else {
-      setError('Invalid credentials. Hint: use admin / password123');
-    }
+    setError('');
+    login.mutate(
+      { username, password },
+      {
+        onSuccess: () => {
+          unlockGarage();
+          onClose();
+        },
+        onError: (err) => {
+          const detail = err?.response?.data?.detail;
+          setError(detail || 'Login failed. Please try again.');
+        },
+      },
+    );
   };
 
   return (
@@ -51,11 +59,12 @@ export default function LoginModal({ isOpen, onClose }) {
                 />
               </div>
               {error && <p className="text-red-500 text-xs">{error}</p>}
-              <button 
+              <button
                 type="submit"
-                className="mt-4 bg-white text-black font-semibold py-2 rounded hover:bg-gray-200 transition-colors"
+                disabled={login.isPending}
+                className="mt-4 bg-white text-black font-semibold py-2 rounded hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Unlock
+                {login.isPending ? 'Unlocking…' : 'Unlock'}
               </button>
             </form>
           </div>

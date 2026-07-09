@@ -1,16 +1,42 @@
-# React + Vite
+# Auto Buddy
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A virtual-garage personal auto-management platform: a 3D garage lobby (React + Three.js) backed by a
+complete record-keeping system (Django + DRF) for vehicles, running logs, fuel, maintenance, documents,
+reminders, and analytics.
 
-Currently, two official plugins are available:
+See [`application_summary.md`](./application_summary.md) for the 3D experience spec and `CLAUDE.md` for
+architecture guidance.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Layout
 
-## React Compiler
+```
+auto-buddy/
+├── backend/    # Django + DRF API (Python 3.14)
+└── frontend/   # React + Vite + React Three Fiber SPA
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The frontend is a pure client; the backend is an API plus the Django admin. They deploy independently.
 
-## Expanding the ESLint configuration
+## Backend — quick start
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env                 # defaults to SQLite; set DATABASE_URL for Postgres
+python manage.py migrate
+python manage.py seed_demo            # creates demo user + the GT-R as real data
+python manage.py runserver            # http://127.0.0.1:8000  (admin at /admin, API at /api)
+```
+
+Demo login: `demo` / `demo12345`.
+
+## Frontend — quick start
+
+```bash
+cd frontend
+npm install
+npm run dev                           # http://localhost:5173, proxies /api to the backend
+```
+
+Run both dev servers side by side; the Vite dev server talks to Django over `/api`.

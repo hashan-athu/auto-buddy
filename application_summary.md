@@ -1,62 +1,84 @@
-# 3D Personal Auto Manager - Technical Summary
+# 3D Personal Auto Manager - Technical Summary (Comprehensive)
 
-This document provides a comprehensive technical overview of the current state of the 3D Personal Auto Manager application. 
+This document provides a full technical breakdown of the 3D Personal Auto Manager application, detailing every architectural layer, 3D asset, and lighting configuration.
 
-## 1. Tech Stack Overview
-- **Core Framework**: React 19 via Vite for lightweight, extremely fast Single Page Application (SPA) delivery.
-- **3D Graphics & Rendering**: Three.js wrapped by React Three Fiber (R3F) and supplemented with `@react-three/drei` for robust utilities like cameras, environments, and HTML 3D overlays.
-- **Styling**: Tailwind CSS (via `@tailwindcss/vite`) for pixel-perfect, flexible, and fully responsive 2D HTML overlays.
-- **State Management**: Zustand for global, hook-based state (e.g. `appState`, `isLoggedIn`, `selectedNode`).
-- **Animations**: Framer Motion for 2D UI animations (e.g. Awakening blinking effects, sidebar sliding menus).
+## 1. Core Architecture & Tech Stack
+- **Framework**: React 19 + Vite 8 (Ultra-fast HMR and build performance).
+- **3D Engine**: React Three Fiber (R3F) + Three.js for canvas rendering.
+- **R3F Utilities**: `@react-three/drei` for GLTF loading, HTML overlays, and OrbitControls.
+- **State Management**: Zustand (Global store tracking application state, login, and node selection).
+- **2D UI/Overlays**: Tailwind CSS (Lucide-React for icons, Framer Motion for UI animations).
+- **Asset Loader**: Vite native URL imports with `?url` suffix and `assetsInclude` configuration in `vite.config.js`.
 
-## 2. Directory Structure
-```text
-/src
- ├── constants/
- │   └── const.js              // The global mock database schema for vehicle specs and user credentials
- ├── store/
- │   └── useAppStore.js        // Zustand global store
- ├── components/
- │   ├── canvas/               // R3F 3D components
- │   │   ├── GarageExterior.jsx   // The dark garage exterior, camera rig, door, padlock
- │   │   ├── GarageInterior.jsx   // Dashboard garage with floor effects and sequenced lighting
- │   │   ├── LoadingAwakening.jsx // First-person blinking eye simulation (Framer Motion overlay)
- │   │   └── VehicleModel.jsx     // Handles the 3D car logic and interactive node points
- │   └── ui/                   // HTML/Tailwind components layered over the 3D canvas
- │       ├── DashboardSidebar.jsx // Slidable right-side panel showing node details
- │       └── LoginModal.jsx       // Security modal overlay when the padlock is clicked
- ├── pages/
- │   ├── Landing.jsx           // Bootstraps exterior canvas & login modals
- │   └── Dashboard.jsx         // Bootstraps interior canvas & HUD components
- ├── App.jsx                   // State-based router (loading -> exterior -> interior)
- └── index.css                 // CSS utilities and Tailwind injections
+---
+
+## 2. 3D Model Specifications
+
+### Exterior Environment (GarageExterior.jsx)
+| Category | Asset Filename | Scale | Position | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **Building** | `small_modern_garage.glb` | `[1, 1, 1]` | `[0, 0, 0]` | High-fidelity modern facade with industrial gate. |
+| **Object** | `game-ready_pbr_padlock.glb` | `[0.4, 0.4, 0.4]` | `[0, 1.1, 0.5]` | Interactive locking mechanism with pulse animation. |
+| **Terrain** | `grass_asphalt_ground.glb` | `[1, 1, 1]` | `[0, -0.05, 0]` | Environment base with grass and asphalt textures. |
+
+### Interior Environment (GarageInterior.jsx)
+| Category | Asset Filename | Scale | Position | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **Interior** | `garage_nfs_2015.glb` | `[50, 50, 50]` | `[0, -0.05, 0]` | Detailed garage interior (NFS 2015 style) scaled for immersion. |
+| **Vehicle** | `nissan_gtr_r35.glb` | `[1, 1, 1]` | `[0, -0.48, 0]` | Hero vehicle with PBR materials and shadow configuration. |
+
+---
+
+## 3. Lighting & Atmospheric Settings
+
+### Phase 1: Exterior Noir
+- **Ambient Light**: `intensity: 0.25` (Lifts shadows to reveal terrain/building details).
+- **Primary Light**: `PointLight` at `[0, 4, 1]`.
+  - **Intensity**: `40`
+  - **Color**: `#ffaa55` (Incandescent warm glow).
+  - **Effects**: `castShadow` enabled, `decay: 2`.
+- **Atmosphere**: Designed to feel like a high-end garage entrance at dusk.
+
+### Phase 2: Interior Showroom
+- **Ambient Light**: `intensity: 0.6` (Ensures full visibility of the garage structure).
+- **Sequenced Lighting**: 5 `SpotLight` ceiling floodlights powered on in **350ms** intervals.
+  - **Master Intensity**: `40` (Light 1) / `25` (Lights 2-5).
+  - **Color**: `#ffffff` (Clean white showroom light).
+- **Environment**: `Environment` component with `preset="city"` and **opacity 1.0** for realistic PBR reflections on the GT-R's bodywork.
+- **Shadows**: `shadows` enabled on the main Canvas for grounded realism.
+
+---
+
+## 4. Interactive Node System (const.js)
+Interactive points are mapped as `[x, y, z]` coordinates relative to the vehicle's world position.
+
+| Node ID | Coordinate | Target Component |
+| :--- | :--- | :--- |
+| `tyre_front_left` | `[1.0, 0.3, 1.4]` | Front-left wheel surface. |
+| `engine_bay` | `[0, 0.8, 1.5]` | Center of the vehicle's hood. |
+| `brake_pads` | `[-1.0, 0.3, -1.2]` | Rear-right braking system area. |
+
+---
+
+## 5. UI & State Flow
+1. **Loading phase**: CSS-based "Awakening" animation (blinking eyelids + blur transition).
+2. **Login Logic**: Validate `admin` / `password123` via `LoginModal.jsx`. 
+3. **Camera Sequencing**:
+   - Camera starts far (`z: 8`).
+   - "Enter Garage" lerps camera to gate view (`z: 4.5`).
+   - Successful unlock fades the scene and transitions state to `interior`.
+4. **Data Sidebar**: Sliding right-panel (`DashboardSidebar.jsx`) triggered by clicking R3F `<Html>` pulsing dots.
+
+---
+
+## 6. Key Configuration Overrides
+**`vite.config.js`**:
+```javascript
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  assetsInclude: ['**/*.glb'], // Allows importing binary assets directly
+});
 ```
-
-## 3. Application Flow & Phases
-
-### Phase 1: The Awakening (`appState: 'loading'`)
-- Handled by `LoadingAwakening.jsx`. 
-- **Effect**: Uses continuous `setTimeout` logic and Framer Motion sequence variants to simulate "eyelashes" blinking up and down via height properties, alongside a CSS backdrop-blur filter easing into `0px`.
-- **Transitions to**: Phase 2 automatically after 3 seconds.
-
-### Phase 2: Garage Exterior / Landing (`appState: 'exterior'`)
-- Handled by `Landing.jsx` & `GarageExterior.jsx`.
-- **Environment**: A dark environment comprised of primitive meshes (brick wall, concrete floor acting as a generic rough standard material, a sliding box garage door) lit by a single orange-tint point light.
-- **Interactivity**: 
-  - Standard DOM button ("Enter Garage") initiates the R3F `CameraRig` lerping the camera dramatically closer to the garage door.
-  - A pulsing 3D padlock with an R3F Drei `<Html>` tooltip overlays.
-- **Authentication**: Clicking the padlock surfaces a Tailwind glass-morphism (`backdrop-blur-xl`) `LoginModal.jsx`. Success validation triggers global state `isUnlocked: true`.
-
-### Phase 3: Inside the Garage (`appState: 'interior'`)
-- Handled by `Dashboard.jsx`, `GarageInterior.jsx`, and `VehicleModel.jsx`.
-- **Environment**: The `GarageInterior.jsx` triggers a sequential lighting cascade over 1.5 seconds, utilizing 5 overhead spot lights. `ContactShadows` are incorporated to provide grounded ambient realism to the car model.
-- **Camera Controls**: Replaced static camera behavior with confined `OrbitControls`, preventing panning or dropping beneath the concrete floor via polar angle limits.
-- **The Vehicle**: `VehicleModel.jsx` renders a placeholder `<boxGeometry>` in place of the final `.glb`. 
-- **Interactive Points**: Maps the `interactiveNodes` array from `const.js` directly onto absolute Vector3 positions around the Box. Utilizes pulsing DOM dots (`<Html>`) that trigger hover statuses and dispatch selected Node data to the global Zustand store on click.
-- **2D UI Overlay**: Activating a node forces the `DashboardSidebar.jsx` (Framer motion) to instantly slide into view natively formatted with the nested node JSON data.
-
-## 4. Next Steps & Future Improvements
-1. **Asset Integration**: Replace the primitive box in `VehicleModel.jsx` with an optimized `.glb`/`.gltf` 3D car model, hooking `useGLTF()` with `@react-three/drei`.
-2. **First Person Awakening**: Add the 3D hand/rig to coordinate with the `LoadingAwakening` module as initially requested.
-3. **Advanced Navigation**: Fine-tune `OrbitControls` max/min azimuths ensuring the user's camera safely avoids clipping through structural scene limits.
-4. **Environment Upgrades**: Upgrade static brick and concrete logic with PBR materials encompassing Normal and Roughness maps for highly photorealistic aesthetics.
+**`index.css`**:
+- Custom `@theme` configuration for modern typography (Inter/Sans).
+- Global overflow hidden for full-screen immersive experience.
