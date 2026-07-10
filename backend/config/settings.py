@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     "apps.vehicles",
     "apps.logs",
     "apps.maintenance",
+    "apps.documents",
+    "apps.reminders",
 ]
 
 MIDDLEWARE = [
@@ -127,7 +129,20 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# Documents live under MEDIA_ROOT but are served only via an owner-checked
+# download view (apps.documents), never the public MEDIA_URL. In production
+# point this at S3 via django-storages.
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# --- Email / reminders ------------------------------------------------------
+# Console backend in dev prints emails to the runserver console; set
+# DJANGO_EMAIL_BACKEND + SMTP env vars in production.
+EMAIL_BACKEND = os.environ.get(
+    "DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "reminders@auto-buddy.local")
+REMINDER_LOOKAHEAD_DAYS = int(os.environ.get("REMINDER_LOOKAHEAD_DAYS", "30"))
+REMINDER_LOOKAHEAD_KM = int(os.environ.get("REMINDER_LOOKAHEAD_KM", "1000"))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

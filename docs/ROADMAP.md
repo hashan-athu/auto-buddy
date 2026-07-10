@@ -52,9 +52,16 @@ Everything hangs off `Vehicle`, which hangs off `owner` — data isolation at th
     HUD ("Open Records"). HUD totals now come from the summary endpoint. Verified end-to-end.
   - Deferred to later: Vehicle *edit/create* UI (API exists; admin covers it for now), React Router pages
     (still an overlay), React Hook Form/Zod (plain controlled forms for now).
-- [ ] **Phase 2 — Documents & reminders**
-  - Document vault (private S3, preview, expiry). Reminder engine (date + odometer triggers,
-    auto-seeded from services/documents). Scheduled scan → email + in-app reminder centre.
+- [x] **Phase 2 — Documents & reminders** *(done)*
+  - Backend: `documents` app (Document + owner-checked download endpoint — files never served via public
+    MEDIA) and `reminders` app (Reminder with date/odometer triggers, dedupe key, status). `run_reminders`
+    management command auto-seeds reminders from document expiry + maintenance next-due, respects dismissal,
+    and emails soon-due items (console backend in dev). `seed_demo` adds a near-expiry insurance doc.
+  - Frontend: `api/documents.js` (list/upload/download) + `api/reminders.js` (list/add/done/dismiss), and
+    Documents + Reminders tabs in the Records panel (upload form, download links, overdue highlighting,
+    done/dismiss). Verified end-to-end incl. private download through the proxy.
+  - Deferred: S3 storage (still local FileSystemStorage; download view is storage-agnostic), Celery
+    (still a cron-able command), in-file preview/thumbnails.
 - [ ] **Phase 3 — The living garage**
   - Real 3D lobby: multi-vehicle select, camera choreography. Data-driven hotspots + health colours
     wired to components/services. Panels open from hotspots. Gate/skip the cinematic for daily use.

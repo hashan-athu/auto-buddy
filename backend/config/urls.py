@@ -13,6 +13,8 @@ api_patterns = [
     path("", include("apps.vehicles.urls")),
     path("", include("apps.logs.urls")),
     path("", include("apps.maintenance.urls")),
+    path("", include("apps.documents.urls")),
+    path("", include("apps.reminders.urls")),
 ]
 
 urlpatterns = [

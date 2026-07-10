@@ -19,13 +19,15 @@ auto-buddy/
 
 The frontend is a pure client; the backend is an API plus the Django admin. They deploy independently.
 
-### Build status: Phases 0–1 done
+### Build status: Phases 0–2 done
 Phase 0 (foundations): custom `User`, owner-scoped `Vehicle`, session auth, frontend data layer.
 Phase 1 (core records): `logs` (RunningLog, FuelEntry) and `maintenance` (MaintenanceRecord) apps, a vehicle
-`summary` endpoint, and a 2D Records panel. The old hardcoded login (`admin`/`password123`) is gone — auth
-hits the API, and the Dashboard HUD totals come from `/api/vehicles/{id}/summary/`. `MOCK_DATA` in
-`frontend/src/constants/const.js` now only supplies the 3D `interactiveNodes` (Phase 3 will make those
-API-backed `Component` records) and a name fallback.
+`summary` endpoint, and a 2D Records panel.
+Phase 2 (documents & reminders): `documents` (private Document + owner-checked download) and `reminders`
+(Reminder + `run_reminders` engine that emails soon-due items) apps, plus Documents/Reminders tabs.
+The old hardcoded login (`admin`/`password123`) is gone — auth hits the API, and the Dashboard HUD totals
+come from `/api/vehicles/{id}/summary/`. `MOCK_DATA` in `frontend/src/constants/const.js` now only supplies
+the 3D `interactiveNodes` (Phase 3 will make those API-backed `Component` records) and a name fallback.
 
 ## Commands
 
@@ -66,7 +68,15 @@ Django project is `config/`; apps live under `backend/apps/` with dotted names (
   under `apps/`, each with its own router included into `/api/`.
 - **Per-vehicle records reuse `apps/vehicles/scoping.py`**: `VehicleScopedViewSet` (queryset filtered to
   `vehicle__owner=request.user`, `?vehicle=` filter) + `VehicleOwnedSerializerMixin` (validates the vehicle
-  is owned on write). Any new per-vehicle record model (documents, reminders) should use both.
+  is owned on write). Every per-vehicle record model uses both (logs, maintenance, documents, reminders).
+- **Documents are private**: files upload under `MEDIA_ROOT` but are served ONLY through
+  `documents/<pk>/download/` (owner-checked `FileResponse`), never the public `MEDIA_URL`. The serializer's
+  `file_url` is a relative path on purpose (works same-origin in prod and through the Vite dev proxy; an
+  absolute backend host would drop the session cookie). Swap to S3/signed URLs later without touching callers.
+- **Reminders engine**: `python manage.py run_reminders` (cron-able) auto-seeds reminders from document
+  expiry + maintenance next-due via a `dedupe_key` (update-in-place, never resurrects a dismissed one) and
+  emails soon-due items. Email uses the console backend in dev; lookahead windows are
+  `REMINDER_LOOKAHEAD_DAYS`/`_KM` in settings.
 
 ## Frontend architecture
 
@@ -80,7 +90,8 @@ Everything below lives under `frontend/src/`.
   `main.jsx` before any POST.
 - `main.jsx` wraps `<App>` in `QueryClientProvider`.
 - **Records surface**: `components/records/RecordsPanel.jsx` is a tabbed slide-in (Overview/Running/Fuel/
-  Maintenance) opened from the Dashboard "Open Records" button; hooks in `api/logs.js`, `api/maintenance.js`.
+  Maintenance/Documents/Reminders) opened from the Dashboard "Open Records" button; hooks in `api/logs.js`,
+  `api/maintenance.js`, `api/documents.js`, `api/reminders.js`.
   Add-forms are plain controlled `useState` (matching the existing style — not React Hook Form yet).
   Mutations invalidate the relevant list plus `['vehicle-summary', id]` so totals refresh.
 

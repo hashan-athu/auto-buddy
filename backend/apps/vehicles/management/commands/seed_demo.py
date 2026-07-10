@@ -11,8 +11,10 @@ import datetime
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 
+from apps.documents.models import Document
 from apps.logs.models import FuelEntry, RunningLog
 from apps.maintenance.models import MaintenanceRecord
 from apps.vehicles.models import Vehicle
@@ -117,3 +119,20 @@ class Command(BaseCommand):
                 vendor="Demo Garage",
             )
             self.stdout.write(self.style.SUCCESS("  + 2 maintenance records"))
+
+        if not vehicle.documents.exists():
+            doc = Document(
+                vehicle=vehicle,
+                type=Document.Type.INSURANCE,
+                title="Comprehensive policy",
+                issuer="Demo Insurance Co.",
+                issued_date=today - datetime.timedelta(days=345),
+                expiry_date=today + datetime.timedelta(days=20),  # soon -> reminder
+                policy_number="DEMO-INS-0001",
+            )
+            doc.file.save(
+                "insurance_policy.txt",
+                ContentFile(b"Demo insurance policy document."),
+                save=True,
+            )
+            self.stdout.write(self.style.SUCCESS("  + 1 document (insurance)"))

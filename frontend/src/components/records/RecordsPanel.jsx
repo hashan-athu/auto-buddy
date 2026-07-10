@@ -13,8 +13,10 @@ import {
   useAddMaintenanceRecord,
   MAINTENANCE_CATEGORIES,
 } from '../../api/maintenance';
+import { useDocuments, useUploadDocument, DOCUMENT_TYPES } from '../../api/documents';
+import { useReminders, useAddReminder, useUpdateReminder } from '../../api/reminders';
 
-const TABS = ['Overview', 'Running', 'Fuel', 'Maintenance'];
+const TABS = ['Overview', 'Running', 'Fuel', 'Maintenance', 'Documents', 'Reminders'];
 const today = () => new Date().toISOString().slice(0, 10);
 
 const inputCls =
@@ -291,6 +293,160 @@ function MaintenanceTab({ vehicleId }) {
   );
 }
 
+// --- Documents --------------------------------------------------------------
+function DocumentsTab({ vehicleId }) {
+  const { data: docs } = useDocuments(vehicleId);
+  const upload = useUploadDocument(vehicleId);
+  const blank = { type: 'insurance', title: '', expiry_date: '', issuer: '', file: null };
+  const [form, setForm] = useState(blank);
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!form.file) return;
+    upload.mutate(form, { onSuccess: () => setForm(blank) });
+  };
+
+  return (
+    <div className="space-y-5">
+      <form onSubmit={submit} className="grid grid-cols-2 gap-3 items-end">
+        <Field label="Type">
+          <select value={form.type} className={inputCls}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}>
+            {DOCUMENT_TYPES.map((t) => (
+              <option key={t.value} value={t.value} className="bg-neutral-900">{t.label}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Expiry (optional)">
+          <input type="date" value={form.expiry_date} className={inputCls}
+            onChange={(e) => setForm({ ...form, expiry_date: e.target.value })} />
+        </Field>
+        <div className="col-span-2">
+          <Field label="Title">
+            <input type="text" required value={form.title} className={inputCls}
+              placeholder="e.g. Comprehensive policy"
+              onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          </Field>
+        </div>
+        <div className="col-span-2">
+          <Field label="File">
+            <input type="file" required className={`${inputCls} file:mr-3 file:border-0 file:bg-white/10 file:text-white file:rounded file:px-2 file:py-1`}
+              onChange={(e) => setForm({ ...form, file: e.target.files[0] ?? null })} />
+          </Field>
+        </div>
+        <div className="col-span-2 flex justify-end">
+          <button type="submit" disabled={upload.isPending} className={btnCls}>
+            {upload.isPending ? 'Uploading…' : 'Upload document'}
+          </button>
+        </div>
+        <div className="col-span-2"><FormError mutation={upload} /></div>
+      </form>
+      <DataTable
+        rows={docs}
+        empty="No documents yet."
+        columns={[
+          { key: 'type', label: 'Type' },
+          { key: 'title', label: 'Title' },
+          { key: 'expiry_date', label: 'Expires', render: (r) => r.expiry_date || '—' },
+          {
+            key: 'file_url',
+            label: 'File',
+            render: (r) => (
+              <a href={`/api/documents/${r.id}/download/`} className="text-blue-400 hover:underline"
+                target="_blank" rel="noreferrer">
+                {r.filename || 'download'}
+              </a>
+            ),
+          },
+        ]}
+      />
+    </div>
+  );
+}
+
+// --- Reminders --------------------------------------------------------------
+function RemindersTab({ vehicleId }) {
+  const { data: reminders } = useReminders(vehicleId);
+  const add = useAddReminder(vehicleId);
+  const update = useUpdateReminder(vehicleId);
+  const [form, setForm] = useState({ title: '', due_date: '' });
+
+  const submit = (e) => {
+    e.preventDefault();
+    add.mutate(
+      { title: form.title, trigger_type: 'date', due_date: form.due_date || null },
+      { onSuccess: () => setForm({ title: '', due_date: '' }) },
+    );
+  };
+
+  const dueText = (r) => {
+    if (r.trigger_type === 'odometer' && r.km_until_due != null)
+      return r.km_until_due < 0 ? `${Math.abs(r.km_until_due)} km overdue` : `in ${r.km_until_due} km`;
+    if (r.due_date)
+      return r.days_until_due < 0 ? `${Math.abs(r.days_until_due)} d overdue` : `in ${r.days_until_due} d`;
+    return '—';
+  };
+
+  return (
+    <div className="space-y-5">
+      <form onSubmit={submit} className="grid grid-cols-3 gap-3 items-end">
+        <div className="col-span-2">
+          <Field label="Reminder">
+            <input type="text" required value={form.title} className={inputCls}
+              placeholder="e.g. Renew insurance"
+              onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          </Field>
+        </div>
+        <Field label="Due date">
+          <input type="date" required value={form.due_date} className={inputCls}
+            onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
+        </Field>
+        <div className="col-span-3 flex justify-end">
+          <button type="submit" disabled={add.isPending} className={btnCls}>
+            {add.isPending ? 'Saving…' : 'Add reminder'}
+          </button>
+        </div>
+        <div className="col-span-3"><FormError mutation={add} /></div>
+      </form>
+
+      {!reminders ? (
+        <p className="text-sm text-gray-500 py-6">Loading…</p>
+      ) : reminders.length === 0 ? (
+        <p className="text-sm text-gray-500 py-6">No reminders yet.</p>
+      ) : (
+        <ul className="space-y-2">
+          {reminders.map((r) => (
+            <li key={r.id}
+              className={`flex items-center justify-between gap-3 rounded border p-3 ${
+                r.is_overdue ? 'border-red-500/40 bg-red-500/5' : 'border-white/10 bg-white/5'
+              } ${r.status !== 'open' ? 'opacity-50' : ''}`}>
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{r.title}</p>
+                <p className={`text-xs ${r.is_overdue ? 'text-red-400' : 'text-gray-400'}`}>
+                  {dueText(r)}
+                  {r.status !== 'open' && ` · ${r.status}`}
+                </p>
+              </div>
+              {r.status === 'open' && (
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={() => update.mutate({ id: r.id, status: 'done' })}
+                    className="text-xs px-2 py-1 rounded bg-white/10 hover:bg-white/20 transition-colors">
+                    Done
+                  </button>
+                  <button onClick={() => update.mutate({ id: r.id, status: 'dismissed' })}
+                    className="text-xs px-2 py-1 rounded hover:bg-white/10 text-gray-400 transition-colors">
+                    Dismiss
+                  </button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 // --- Panel shell ------------------------------------------------------------
 export default function RecordsPanel({ vehicleId, onClose }) {
   const [tab, setTab] = useState('Overview');
@@ -319,12 +475,12 @@ export default function RecordsPanel({ vehicleId, onClose }) {
             </button>
           </div>
 
-          <div className="flex gap-1 px-4 pt-3 border-b border-white/10">
+          <div className="flex gap-1 px-4 pt-3 border-b border-white/10 overflow-x-auto">
             {TABS.map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-4 py-2 text-sm rounded-t transition-colors ${
+                className={`px-4 py-2 text-sm rounded-t transition-colors whitespace-nowrap ${
                   tab === t
                     ? 'bg-white/10 text-white border-b-2 border-white'
                     : 'text-gray-400 hover:text-white'
@@ -340,6 +496,8 @@ export default function RecordsPanel({ vehicleId, onClose }) {
             {tab === 'Running' && <RunningTab vehicleId={vehicleId} />}
             {tab === 'Fuel' && <FuelTab vehicleId={vehicleId} />}
             {tab === 'Maintenance' && <MaintenanceTab vehicleId={vehicleId} />}
+            {tab === 'Documents' && <DocumentsTab vehicleId={vehicleId} />}
+            {tab === 'Reminders' && <RemindersTab vehicleId={vehicleId} />}
           </div>
         </motion.div>
       </motion.div>
