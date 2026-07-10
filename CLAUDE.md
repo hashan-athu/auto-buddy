@@ -19,15 +19,17 @@ auto-buddy/
 
 The frontend is a pure client; the backend is an API plus the Django admin. They deploy independently.
 
-### Build status: Phases 0–2 done
+### Build status: Phases 0–3 done
 Phase 0 (foundations): custom `User`, owner-scoped `Vehicle`, session auth, frontend data layer.
 Phase 1 (core records): `logs` (RunningLog, FuelEntry) and `maintenance` (MaintenanceRecord) apps, a vehicle
 `summary` endpoint, and a 2D Records panel.
 Phase 2 (documents & reminders): `documents` (private Document + owner-checked download) and `reminders`
 (Reminder + `run_reminders` engine that emails soon-due items) apps, plus Documents/Reminders tabs.
-The old hardcoded login (`admin`/`password123`) is gone — auth hits the API, and the Dashboard HUD totals
-come from `/api/vehicles/{id}/summary/`. `MOCK_DATA` in `frontend/src/constants/const.js` now only supplies
-the 3D `interactiveNodes` (Phase 3 will make those API-backed `Component` records) and a name fallback.
+Phase 3 (living garage): `components` app (Component with health) drives the 3D hotspots; multi-vehicle
+active-vehicle switching; skippable intro.
+The old hardcoded login (`admin`/`password123`) is gone — auth hits the API, HUD totals come from the
+summary endpoint, and the 3D hotspots come from Component records. `MOCK_DATA` in
+`frontend/src/constants/const.js` is now vestigial (only a vehicle-name fallback) — safe to remove later.
 
 ## Commands
 
@@ -68,7 +70,8 @@ Django project is `config/`; apps live under `backend/apps/` with dotted names (
   under `apps/`, each with its own router included into `/api/`.
 - **Per-vehicle records reuse `apps/vehicles/scoping.py`**: `VehicleScopedViewSet` (queryset filtered to
   `vehicle__owner=request.user`, `?vehicle=` filter) + `VehicleOwnedSerializerMixin` (validates the vehicle
-  is owned on write). Every per-vehicle record model uses both (logs, maintenance, documents, reminders).
+  is owned on write). Every per-vehicle record model uses both (logs, maintenance, documents, reminders,
+  components).
 - **Documents are private**: files upload under `MEDIA_ROOT` but are served ONLY through
   `documents/<pk>/download/` (owner-checked `FileResponse`), never the public `MEDIA_URL`. The serializer's
   `file_url` is a relative path on purpose (works same-origin in prod and through the Vite dev proxy; an
@@ -112,7 +115,7 @@ router, switched in `src/App.jsx`:
 
 ### Scripted transition sequence
 A chain of timers and state flips spread across components — trace all of these when touching timing:
-1. `LoadingAwakening` runs a blink sequence, then `setAppState('exterior')` after ~5s.
+1. `LoadingAwakening` runs a blink sequence, then `setAppState('exterior')` after ~5s. It's skipped on return visits (localStorage `ab_intro_seen`) and has a Skip button.
 2. `GarageExterior`: local `hasEntered` gates the "Awaiting Command" button; entering lerps the camera via the `CameraRig`/`useFrame` rig.
 3. Clicking the padlock opens `LoginModal`, which now calls the real login (`useLogin` mutation); on success it calls `unlockGarage()`.
 4. On `isUnlocked`, the garage door mesh animates up in `GarageModel`'s `useFrame`, which fires `setAppState('interior')` once the door clears a height threshold. **Note:** `Landing.jsx` *also* independently schedules `setAppState('interior')` on a 3s timeout — two paths trigger the same transition, so verify both when changing it.
@@ -124,11 +127,17 @@ Canvas components live in `src/components/canvas/`. Each `<Canvas>` scene owns i
 - **Animation via `useFrame`** using `THREE.MathUtils.lerp` / manual velocity integration. No 3D animation library.
 - **2D-in-3D overlays** use drei's `<Html>` (tooltips, pulsing interactive dots).
 
-### Interactive node system
-`MOCK_DATA.vehicle.interactiveNodes` defines clickable hotspots as world-space `[x,y,z]` positions relative
-to the vehicle. Rendered as `<Html>` dots in the interior scene; clicking sets `selectedNode`, which opens
-`DashboardSidebar`. Positions are hand-tuned to the current GT-R model and scale — changing the vehicle model
-or its transform requires re-tuning. (Planned: these become API-backed `Component` records with health colours.)
+### Interactive hotspot system (API-backed as of Phase 3)
+The clickable hotspots are the intersection of two sources, joined by `hotspot_key`:
+- **Position** (presentation) — `frontend/src/scene/hotspots.js` maps `model_3d` → `[{ hotspot_key, position,
+  title }]`, hand-tuned per `.glb`. Changing the vehicle model/scale means re-tuning these coordinates.
+- **State** (data) — `Component` records from `/api/components/?vehicle=<id>` supply `health`
+  (good/warning/critical) and service metadata.
+
+`VehicleModel` merges them, renders `<Html>` dots coloured by `healthColor(health)`, and on click sets
+`selectedNode = { hotspot_key, title, component }`, which `DashboardSidebar` renders. Editing a component's
+health (admin or API) recolours the dot — the world reflects the records. Active vehicle comes from
+`useActiveVehicle()` (store `activeVehicleId`, falling back to the first vehicle).
 
 ### 2D UI
 Tailwind CSS v4 (via `@tailwindcss/vite`, configured through `@theme` in `src/index.css` — no

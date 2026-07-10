@@ -1,10 +1,27 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAppStore } from '../../store/useAppStore';
 import { X } from 'lucide-react';
+import { useAppStore } from '../../store/useAppStore';
+import { healthColor } from '../../scene/hotspots';
+
+const HEALTH_LABEL = {
+  good: 'Good',
+  warning: 'Attention soon',
+  critical: 'Action needed',
+};
+
+const FIELDS = [
+  ['category', 'Category'],
+  ['last_serviced_date', 'Last serviced'],
+  ['last_serviced_odometer', 'Serviced at (km)'],
+  ['expected_life_km', 'Expected life (km)'],
+  ['note', 'Notes'],
+];
 
 export default function DashboardSidebar() {
   const { selectedNode, setSelectedNode } = useAppStore();
+  const component = selectedNode?.component;
+  const color = healthColor(component?.health);
 
   return (
     <AnimatePresence>
@@ -19,7 +36,7 @@ export default function DashboardSidebar() {
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
             <h2 className="text-xl font-bold tracking-wider">{selectedNode.title}</h2>
-            <button 
+            <button
               onClick={() => setSelectedNode(null)}
               className="p-1 hover:bg-white/10 rounded-full transition-colors"
             >
@@ -27,26 +44,32 @@ export default function DashboardSidebar() {
             </button>
           </div>
 
-          {/* Dynamic Data Content */}
-          <div className="flex-1 overflow-y-auto space-y-4">
-            {Object.entries(selectedNode.data).map(([key, value]) => {
-              // We skip rendering the healthColor explicitly as text if it's just a class, 
-              // but we can use it to style the value if it's related to health.
-              if (key === 'healthColor') return null;
+          {!component ? (
+            <p className="text-sm text-gray-400">
+              No component record for this part yet. Add one in the admin or via the API.
+            </p>
+          ) : (
+            <div className="flex-1 overflow-y-auto space-y-4">
+              {/* Health badge */}
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+                <span className="text-sm font-semibold" style={{ color }}>
+                  {HEALTH_LABEL[component.health] ?? component.health}
+                </span>
+              </div>
 
-              // Formatting the key for display (e.g., lastReplaced -> Last Replaced)
-              const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-
-              return (
-                <div key={key} className="bg-white/5 p-4 rounded border border-white/5">
-                  <p className="text-xs text-gray-400 capitalize mb-1">{formattedKey}</p>
-                  <p className={`text-sm font-semibold ${key === 'expectedChange' && selectedNode.data.healthColor ? selectedNode.data.healthColor : 'text-white'}`}>
-                    {value}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
+              {FIELDS.map(([key, label]) => {
+                const value = component[key];
+                if (value === null || value === undefined || value === '') return null;
+                return (
+                  <div key={key} className="bg-white/5 p-4 rounded border border-white/5">
+                    <p className="text-xs text-gray-400 capitalize mb-1">{label}</p>
+                    <p className="text-sm font-semibold text-white capitalize">{value}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </motion.div>
       )}
     </AnimatePresence>

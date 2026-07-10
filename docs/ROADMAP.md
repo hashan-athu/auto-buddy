@@ -62,9 +62,18 @@ Everything hangs off `Vehicle`, which hangs off `owner` — data isolation at th
     done/dismiss). Verified end-to-end incl. private download through the proxy.
   - Deferred: S3 storage (still local FileSystemStorage; download view is storage-agnostic), Celery
     (still a cron-able command), in-file preview/thumbnails.
-- [ ] **Phase 3 — The living garage**
-  - Real 3D lobby: multi-vehicle select, camera choreography. Data-driven hotspots + health colours
-    wired to components/services. Panels open from hotspots. Gate/skip the cinematic for daily use.
+- [x] **Phase 3 — The living garage** *(done)*
+  - Backend: `components` app — Component (vehicle-scoped: `hotspot_key`, category, health good/warning/
+    critical, service metadata). `seed_demo` seeds the GT-R's tyre/engine/brakes with matching health.
+  - Frontend: `scene/hotspots.js` maps `model_3d` → 3D hotspot positions + `HEALTH_COLORS`; `VehicleModel`
+    merges those positions with live Component records by `hotspot_key` and colours each dot by health;
+    clicking opens the sidebar with the real component data. Editing a component's health recolours the world.
+  - Multi-vehicle: `activeVehicleId` in the store + `useActiveVehicle()`; a switcher appears in the HUD once
+    there's more than one car (Dashboard, RecordsPanel, hotspots all follow the active vehicle).
+  - Cinematic gated: intro is skipped on return visits (localStorage) and has a Skip button.
+  - Deferred: a true 3D car-select carousel + camera choreography (switcher is 2D for now); auto-deriving
+    health from wear/service history (currently an explicit field); the old `window.toggleDebug` node-tuner
+    was removed (positions now live in `scene/hotspots.js`).
 - [ ] **Phase 4 — Analytics & hardening**
   - Dashboards (cost of ownership, health scoring, trends). Performance pass, responsive/PWA groundwork.
     SaaS-readiness (onboarding, per-user hardening, billing hooks) when/if going multi-user.

@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "apps.maintenance",
     "apps.documents",
     "apps.reminders",
+    "apps.components",
 ]
 
 MIDDLEWARE = [

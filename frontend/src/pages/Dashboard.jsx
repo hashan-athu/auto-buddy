@@ -3,14 +3,14 @@ import GarageInterior from '../components/canvas/GarageInterior';
 import DashboardSidebar from '../components/ui/DashboardSidebar';
 import RecordsPanel from '../components/records/RecordsPanel';
 import { MOCK_DATA } from '../constants/const';
-import { useVehicles, useVehicleSummary } from '../api/vehicles';
+import { useActiveVehicle, useVehicleSummary } from '../api/vehicles';
+import { useAppStore } from '../store/useAppStore';
 
 export default function Dashboard() {
   const [showHUD, setShowHUD] = useState(true);
   const [showRecords, setShowRecords] = useState(false);
-  const { data: vehicles } = useVehicles();
-  // First vehicle in the garage for now (multi-vehicle select lands in Phase 3).
-  const vehicle = vehicles?.[0];
+  const { vehicle, vehicles } = useActiveVehicle();
+  const setActiveVehicleId = useAppStore((s) => s.setActiveVehicleId);
   const { data: summary } = useVehicleSummary(vehicle?.id);
 
   const title = vehicle ? `${vehicle.make} ${vehicle.model}` : MOCK_DATA.vehicle.model;
@@ -20,11 +20,25 @@ export default function Dashboard() {
     <div className="relative w-full h-screen bg-black overflow-hidden font-sans">
       <GarageInterior />
 
-      {/* 2D HUD Overlays — now backed by the real vehicle summary */}
+      {/* 2D HUD Overlays — backed by the real vehicle summary */}
       {showHUD && (
-        <div className="absolute top-6 left-6 z-10 pointer-events-none text-white backdrop-blur-md bg-black/40 p-4 rounded border border-white/10">
-          <h1 className="text-2xl font-bold tracking-widest">{title}</h1>
-          <div className="mt-2 text-sm text-gray-300 space-y-1">
+        <div className="absolute top-6 left-6 z-10 text-white backdrop-blur-md bg-black/40 p-4 rounded border border-white/10">
+          {/* Vehicle switcher appears once there's more than one car */}
+          {vehicles.length > 1 && (
+            <select
+              value={vehicle?.id ?? ''}
+              onChange={(e) => setActiveVehicleId(Number(e.target.value))}
+              className="mb-2 w-full bg-black/50 border border-white/20 rounded px-2 py-1 text-xs text-white focus:outline-none"
+            >
+              {vehicles.map((v) => (
+                <option key={v.id} value={v.id} className="bg-neutral-900">
+                  {v.make} {v.model}
+                </option>
+              ))}
+            </select>
+          )}
+          <h1 className="text-2xl font-bold tracking-widest pointer-events-none">{title}</h1>
+          <div className="mt-2 text-sm text-gray-300 space-y-1 pointer-events-none">
             <p>Maintenance: ${Number(summary?.maintenance_cost ?? 0).toLocaleString()}</p>
             <p>Fuel: ${Number(summary?.fuel_cost ?? 0).toLocaleString()}</p>
             <p>Odometer: {Number(odometer).toLocaleString()} km</p>

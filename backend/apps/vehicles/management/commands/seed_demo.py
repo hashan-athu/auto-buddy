@@ -14,6 +14,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 
+from apps.components.models import Component
 from apps.documents.models import Document
 from apps.logs.models import FuelEntry, RunningLog
 from apps.maintenance.models import MaintenanceRecord
@@ -136,3 +137,27 @@ class Command(BaseCommand):
                 save=True,
             )
             self.stdout.write(self.style.SUCCESS("  + 1 document (insurance)"))
+
+        if not vehicle.components.exists():
+            # hotspot_key values match frontend/src/scene/hotspots.js.
+            Component.objects.create(
+                vehicle=vehicle, hotspot_key="tyre_front_left",
+                label="Front-left tyre", category=Component.Category.TYRE,
+                health=Component.Health.GOOD,
+                last_serviced_date=today - datetime.timedelta(days=180),
+                expected_life_km=40000, note="34 psi, good tread",
+            )
+            Component.objects.create(
+                vehicle=vehicle, hotspot_key="engine",
+                label="Engine bay", category=Component.Category.ENGINE,
+                health=Component.Health.WARNING,
+                note="Service due in ~500 km",
+            )
+            Component.objects.create(
+                vehicle=vehicle, hotspot_key="brakes",
+                label="Rear brakes", category=Component.Category.BRAKES,
+                health=Component.Health.CRITICAL,
+                last_serviced_date=today - datetime.timedelta(days=430),
+                note="90% wear — replace immediately",
+            )
+            self.stdout.write(self.style.SUCCESS("  + 3 components"))

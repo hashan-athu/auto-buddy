@@ -2,11 +2,27 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../../store/useAppStore';
 
+const INTRO_SEEN_KEY = 'ab_intro_seen';
+
 export default function LoadingAwakening() {
   const [blinkPhase, setBlinkPhase] = useState(0);
   const { appState, setAppState } = useAppStore();
 
+  const skipIntro = () => {
+    try { localStorage.setItem(INTRO_SEEN_KEY, '1'); } catch { /* ignore */ }
+    setAppState('exterior');
+  };
+
   useEffect(() => {
+    // Returning visitors skip the cinematic — a 5s intro is magic once and
+    // friction every day after.
+    let seen = false;
+    try { seen = localStorage.getItem(INTRO_SEEN_KEY) === '1'; } catch { /* ignore */ }
+    if (seen) {
+      setAppState('exterior');
+      return;
+    }
+
     // Sequence of blinks using timeouts (simulating eyes opening)
     const t1 = setTimeout(() => setBlinkPhase(1), 800);   // open slightly
     const t2 = setTimeout(() => setBlinkPhase(0), 1200);  // close
@@ -15,7 +31,10 @@ export default function LoadingAwakening() {
     const t5 = setTimeout(() => {
       setBlinkPhase(3); // fully open
       // Transition to exterior phase after fully open
-      setTimeout(() => setAppState('exterior'), 2000);
+      setTimeout(() => {
+        try { localStorage.setItem(INTRO_SEEN_KEY, '1'); } catch { /* ignore */ }
+        setAppState('exterior');
+      }, 2000);
     }, 3000);
 
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); };
@@ -70,12 +89,20 @@ export default function LoadingAwakening() {
       />
       
       {/* CSS Blur Overlay - reducing as eyes open */}
-      <motion.div 
+      <motion.div
         className="absolute inset-0 bg-transparent"
         initial={{ backdropFilter: 'blur(15px)' }}
         animate={{ backdropFilter: blinkPhase === 3 ? 'blur(0px)' : 'blur(15px)' }}
         transition={{ duration: 2 }}
       />
+
+      {/* Skip the cinematic */}
+      <button
+        onClick={skipIntro}
+        className="absolute bottom-6 right-6 z-10 pointer-events-auto text-white/60 hover:text-white text-xs tracking-[0.3em] uppercase transition-colors"
+      >
+        Skip →
+      </button>
     </div>
   );
 }
