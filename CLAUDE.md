@@ -40,6 +40,8 @@ summary endpoint, and the 3D hotspots come from Component records. `MOCK_DATA` i
 - `python manage.py migrate` / `makemigrations`
 - `python manage.py seed_demo` — creates demo user + the GT-R as real data (idempotent)
 - `python manage.py createsuperuser` — for admin access
+- `python manage.py test` — backend test suite (28 tests; owner-scoping, reminder engine, analytics/summary
+  math, document privacy). Run a subset with e.g. `python manage.py test apps.reminders`.
 - Demo login: `demo` / `demo12345`
 
 **Frontend** (from `frontend/`):
@@ -49,7 +51,7 @@ summary endpoint, and the 3D hotspots come from Component records. `MOCK_DATA` i
   `eslint-plugin-react`'s `jsx-uses-vars` so member-expression JSX like `<motion.div>` isn't false-flagged.
 
 Run both dev servers together; the browser sees a single origin via the Vite proxy, so session + CSRF
-cookies work without CORS friction. No automated tests are configured yet.
+cookies work without CORS friction. Backend tests exist (`python manage.py test`); the frontend has none yet.
 
 ## Backend architecture
 

@@ -27,6 +27,7 @@ cp .env.example .env                 # defaults to SQLite; set DATABASE_URL for 
 python manage.py migrate
 python manage.py seed_demo            # creates demo user + the GT-R as real data
 python manage.py runserver            # http://127.0.0.1:8000  (admin at /admin, API at /api)
+python manage.py test                 # run the backend test suite
 ```
 
 Demo login: `demo` / `demo12345`.

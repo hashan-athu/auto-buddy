@@ -115,8 +115,10 @@ the frontend mostly only creates and lists. Prioritised:
   - Reminder engine extracted to `apps/reminders/engine.py`; `POST /api/reminders/run/` runs it scoped to
     the user's vehicles. The dashboard runs it once on entry, and the Reminders tab has a "Check now" button.
 - [ ] **C — Nice-to-haves**
-  - True 3D car-select carousel (2D switcher covers it for now); tests (none yet); code-split the ~1.4 MB
-    three.js chunk.
+  - [x] Backend tests — `python manage.py test` (28 tests: owner-scoping, reminder engine, analytics/summary
+    math, document privacy). Frontend tests still none.
+  - [ ] True 3D car-select carousel (2D switcher covers it for now).
+  - [ ] Code-split the ~1.4 MB three.js chunk.
 
 **Out of scope while localhost-only:** deployment/CI, Postgres/S3, PWA, SaaS onboarding/billing (see the
 Deployment scope note up top).
