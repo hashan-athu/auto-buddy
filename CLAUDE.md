@@ -19,12 +19,13 @@ auto-buddy/
 
 The frontend is a pure client; the backend is an API plus the Django admin. They deploy independently.
 
-### Build status: Phase 0 (foundations) is done
-Custom `User`, owner-scoped `Vehicle`, session auth, and a wired-up frontend data layer exist and are
-verified end-to-end. The old hardcoded login (`admin`/`password123`) is gone — auth now hits the API.
-`MOCK_DATA` in `frontend/src/constants/const.js` still supplies the 3D `interactiveNodes` and the
-maintenance/fuel HUD numbers (those domains land in later phases); the vehicle name and odometer in the
-HUD, and all auth, come from the API.
+### Build status: Phases 0–1 done
+Phase 0 (foundations): custom `User`, owner-scoped `Vehicle`, session auth, frontend data layer.
+Phase 1 (core records): `logs` (RunningLog, FuelEntry) and `maintenance` (MaintenanceRecord) apps, a vehicle
+`summary` endpoint, and a 2D Records panel. The old hardcoded login (`admin`/`password123`) is gone — auth
+hits the API, and the Dashboard HUD totals come from `/api/vehicles/{id}/summary/`. `MOCK_DATA` in
+`frontend/src/constants/const.js` now only supplies the 3D `interactiveNodes` (Phase 3 will make those
+API-backed `Component` records) and a name fallback.
 
 ## Commands
 
@@ -60,8 +61,12 @@ Django project is `config/`; apps live under `backend/apps/` with dotted names (
 - **Auth is session + CSRF** (DRF `SessionAuthentication`, `IsAuthenticated` default). Endpoints under
   `/api/auth/`: `csrf/` (GET, sets cookie), `login/`, `logout/`, `me/`. `me/` returns 403 when anonymous —
   the frontend treats that as "logged out".
-- **API routing**: `config/urls.py` mounts `/api/auth/` (accounts) and `/api/` (a DRF `DefaultRouter` with
-  `vehicles`). Add new domains as new apps under `apps/`, each with its own router included into `/api/`.
+- **API routing**: `config/urls.py` mounts `/api/auth/` (accounts) and `/api/` (each app contributes a DRF
+  router: `vehicles`, `running-logs`, `fuel-entries`, `maintenance-records`). Add new domains as new apps
+  under `apps/`, each with its own router included into `/api/`.
+- **Per-vehicle records reuse `apps/vehicles/scoping.py`**: `VehicleScopedViewSet` (queryset filtered to
+  `vehicle__owner=request.user`, `?vehicle=` filter) + `VehicleOwnedSerializerMixin` (validates the vehicle
+  is owned on write). Any new per-vehicle record model (documents, reminders) should use both.
 
 ## Frontend architecture
 
@@ -74,6 +79,14 @@ Everything below lives under `frontend/src/`.
   (`csrftoken` → `X-CSRFToken`) so axios attaches the token automatically. `ensureCsrf()` is called once in
   `main.jsx` before any POST.
 - `main.jsx` wraps `<App>` in `QueryClientProvider`.
+- **Records surface**: `components/records/RecordsPanel.jsx` is a tabbed slide-in (Overview/Running/Fuel/
+  Maintenance) opened from the Dashboard "Open Records" button; hooks in `api/logs.js`, `api/maintenance.js`.
+  Add-forms are plain controlled `useState` (matching the existing style — not React Hook Form yet).
+  Mutations invalidate the relevant list plus `['vehicle-summary', id]` so totals refresh.
+
+Note: the ESLint flat config lacks `eslint-plugin-react`, so `jsx-uses-vars` doesn't fire — lowercase
+identifiers used only as member-expression JSX (e.g. `motion` in `<motion.div>`) are false-flagged as unused
+by `no-unused-vars`. Every framer-motion file carries this; it's a config gap, not a real error.
 
 ### State-driven "scene" routing
 A single Zustand store (`src/store/useAppStore.js`) drives the experience. `appState` is the top-level

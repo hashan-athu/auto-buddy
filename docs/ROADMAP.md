@@ -43,9 +43,15 @@ Everything hangs off `Vehicle`, which hangs off `owner` — data isolation at th
 - [x] **Phase 0 — Foundations** *(done — branch `phase-0-foundations`, commit 64b13da)*
   - Monorepo (`backend/` + `frontend/`), Django+DRF, custom User, owner-scoped Vehicle, session auth,
     `seed_demo`, frontend data layer (TanStack Query + axios), real login, Vite proxy. Verified e2e.
-- [ ] **Phase 1 — Core records (MVP)**
-  - Vehicle profile CRUD, RunningLog, FuelEntry, MaintenanceRecord models + 2D list/detail/add screens.
-    Basic totals (spend, distance, economy). Admin as the power-editing backstop.
+- [x] **Phase 1 — Core records (MVP)** *(done)*
+  - Backend: `logs` app (RunningLog, FuelEntry) + `maintenance` app (MaintenanceRecord), all owner/vehicle
+    -scoped via `apps.vehicles.scoping`, with `?vehicle=` filtering and admin. `GET /api/vehicles/{id}/summary/`
+    returns distance / fuel / maintenance totals + fuel economy. `seed_demo` now seeds sample records.
+  - Frontend: query/mutation hooks (`api/logs.js`, `api/maintenance.js`, `useVehicleSummary`) and a tabbed
+    Records panel (Overview / Running / Fuel / Maintenance) with lists + add forms, opened from the Dashboard
+    HUD ("Open Records"). HUD totals now come from the summary endpoint. Verified end-to-end.
+  - Deferred to later: Vehicle *edit/create* UI (API exists; admin covers it for now), React Router pages
+    (still an overlay), React Hook Form/Zod (plain controlled forms for now).
 - [ ] **Phase 2 — Documents & reminders**
   - Document vault (private S3, preview, expiry). Reminder engine (date + odometer triggers,
     auto-seeded from services/documents). Scheduled scan → email + in-app reminder centre.

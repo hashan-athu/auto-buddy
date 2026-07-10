@@ -10,3 +10,14 @@ async function fetchVehicles() {
 export function useVehicles() {
   return useQuery({ queryKey: ['vehicles'], queryFn: fetchVehicles });
 }
+
+export function useVehicleSummary(vehicleId) {
+  return useQuery({
+    queryKey: ['vehicle-summary', vehicleId],
+    queryFn: async () => {
+      const { data } = await api.get(`/vehicles/${vehicleId}/summary/`);
+      return data;
+    },
+    enabled: !!vehicleId,
+  });
+}

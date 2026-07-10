@@ -11,6 +11,8 @@ from django.urls import include, path
 api_patterns = [
     path("auth/", include("apps.accounts.urls")),
     path("", include("apps.vehicles.urls")),
+    path("", include("apps.logs.urls")),
+    path("", include("apps.maintenance.urls")),
 ]
 
 urlpatterns = [

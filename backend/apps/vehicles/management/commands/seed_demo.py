@@ -7,9 +7,14 @@ const.js now comes from the database, owned by a real user.
 
 Idempotent — safe to run repeatedly.
 """
+import datetime
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
+from apps.logs.models import FuelEntry, RunningLog
+from apps.maintenance.models import MaintenanceRecord
 from apps.vehicles.models import Vehicle
 
 User = get_user_model()
@@ -52,8 +57,63 @@ class Command(BaseCommand):
         else:
             self.stdout.write(f"Vehicle '{vehicle}' already exists.")
 
+        self._seed_records(vehicle)
+
         self.stdout.write(
             self.style.SUCCESS(
                 f"\nDemo ready. Log in with  {DEMO_USERNAME} / {DEMO_PASSWORD}"
             )
         )
+
+    def _seed_records(self, vehicle):
+        """Add a few running logs, fuel fills, and services — once."""
+        today = datetime.date.today()
+
+        if not vehicle.running_logs.exists():
+            for weeks_ago, odo in [(8, 11800), (6, 12010), (4, 12190), (2, 12330), (0, 12450)]:
+                RunningLog.objects.create(
+                    vehicle=vehicle,
+                    date=today - datetime.timedelta(weeks=weeks_ago),
+                    odometer=odo,
+                )
+            self.stdout.write(self.style.SUCCESS("  + 5 running logs"))
+
+        if not vehicle.fuel_entries.exists():
+            for weeks_ago, odo, litres, cost in [
+                (8, 11800, "52.00", "104.00"),
+                (5, 12050, "48.50", "99.20"),
+                (2, 12330, "55.00", "112.75"),
+            ]:
+                FuelEntry.objects.create(
+                    vehicle=vehicle,
+                    date=today - datetime.timedelta(weeks=weeks_ago),
+                    odometer=odo,
+                    litres=Decimal(litres),
+                    total_cost=Decimal(cost),
+                    station="Demo Fuel Co.",
+                )
+            self.stdout.write(self.style.SUCCESS("  + 3 fuel entries"))
+
+        if not vehicle.maintenance_records.exists():
+            MaintenanceRecord.objects.create(
+                vehicle=vehicle,
+                date=today - datetime.timedelta(weeks=6),
+                odometer=12010,
+                category=MaintenanceRecord.Category.OIL_CHANGE,
+                title="Oil & filter change",
+                parts_cost=Decimal("85.00"),
+                labor_cost=Decimal("60.00"),
+                vendor="Demo Garage",
+                next_due_odometer=17010,
+            )
+            MaintenanceRecord.objects.create(
+                vehicle=vehicle,
+                date=today - datetime.timedelta(weeks=1),
+                odometer=12390,
+                category=MaintenanceRecord.Category.BRAKES,
+                title="Rear brake pads",
+                parts_cost=Decimal("220.00"),
+                labor_cost=Decimal("140.00"),
+                vendor="Demo Garage",
+            )
+            self.stdout.write(self.style.SUCCESS("  + 2 maintenance records"))
