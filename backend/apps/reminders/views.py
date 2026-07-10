@@ -1,3 +1,9 @@
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.reminders import engine
+from apps.vehicles.models import Vehicle
 from apps.vehicles.scoping import VehicleScopedViewSet
 
 from .serializers import ReminderSerializer
@@ -20,3 +26,17 @@ class ReminderViewSet(VehicleScopedViewSet):
         if status:
             qs = qs.filter(status=status)
         return qs
+
+
+class RunRemindersView(APIView):
+    """Run the reminder engine on demand, scoped to the current user's vehicles.
+
+    There is no cron on localhost, so the app triggers this (a button, and once
+    on entering the garage) to keep reminders fresh and send any due emails.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        stats = engine.run(Vehicle.objects.filter(owner=request.user))
+        return Response(stats)

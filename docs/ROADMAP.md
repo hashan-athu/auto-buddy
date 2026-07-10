@@ -108,10 +108,12 @@ the frontend mostly only creates and lists. Prioritised:
   - Manage components from the hotspot sidebar: `DashboardSidebar` reads live component data and can edit
     health/service (recolours the hotspot) or create a component where none exists — the "edit a record →
     the 3D world recolours" loop is now two-directional in the UI.
-- [ ] **B — Daily-use flow**
-  - Skip login when the Django session is still valid (`useMe` exists but isn't wired — you log in every launch).
-  - Logout button (`useLogout` hook exists, unwired).
-  - Trigger `run_reminders` without the terminal (a "check now" button / run-on-login) — no cron locally.
+- [x] **B — Daily-use flow** *(done)*
+  - `App` wires `useMe`: a valid Django session skips the intro + padlock and lands you straight in the
+    garage (the `!isUnlocked` guard preserves the fresh-login door cinematic).
+  - Logout button (top-right of the dashboard) → `useLogout` + a store `logOut` reset back to the exterior.
+  - Reminder engine extracted to `apps/reminders/engine.py`; `POST /api/reminders/run/` runs it scoped to
+    the user's vehicles. The dashboard runs it once on entry, and the Reminders tab has a "Check now" button.
 - [ ] **C — Nice-to-haves**
   - True 3D car-select carousel (2D switcher covers it for now); tests (none yet); code-split the ~1.4 MB
     three.js chunk.

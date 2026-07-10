@@ -46,3 +46,15 @@ export function useDeleteReminder(vehicleId) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['reminders', vehicleId] }),
   });
 }
+
+// Runs the reminder engine for the current user's vehicles (no cron locally).
+export function useRunReminders() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post('/reminders/run/');
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['reminders'] }),
+  });
+}

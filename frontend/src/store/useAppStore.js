@@ -8,6 +8,16 @@ export const useAppStore = create((set) => ({
   isLoggedIn: false,
   logIn: () => set({ isLoggedIn: true }),
 
+  // Full reset back to the locked exterior — used on logout.
+  logOut: () =>
+    set({
+      isLoggedIn: false,
+      isUnlocked: false,
+      selectedNode: null,
+      activeVehicleId: null,
+      appState: 'exterior',
+    }),
+
   isUnlocked: false,
   unlockGarage: () => set({ isUnlocked: true }),
 

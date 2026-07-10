@@ -78,10 +78,12 @@ Django project is `config/`; apps live under `backend/apps/` with dotted names (
   `documents/<pk>/download/` (owner-checked `FileResponse`), never the public `MEDIA_URL`. The serializer's
   `file_url` is a relative path on purpose (works same-origin in prod and through the Vite dev proxy; an
   absolute backend host would drop the session cookie). Swap to S3/signed URLs later without touching callers.
-- **Reminders engine**: `python manage.py run_reminders` (cron-able) auto-seeds reminders from document
-  expiry + maintenance next-due via a `dedupe_key` (update-in-place, never resurrects a dismissed one) and
-  emails soon-due items. Email uses the console backend in dev; lookahead windows are
-  `REMINDER_LOOKAHEAD_DAYS`/`_KM` in settings.
+- **Reminders engine**: logic lives in `apps/reminders/engine.py` (`engine.run(vehicles_qs)`), shared by two
+  callers — `python manage.py run_reminders` (all vehicles, cron-able) and `POST /api/reminders/run/`
+  (scoped to `request.user`'s vehicles, since there's no cron on localhost; the dashboard fires it on entry
+  and the Reminders tab has a "Check now" button). It auto-seeds reminders from document expiry + maintenance
+  next-due via a `dedupe_key` (update-in-place, never resurrects a dismissed one) and emails soon-due items.
+  Email uses the console backend in dev; lookahead windows are `REMINDER_LOOKAHEAD_DAYS`/`_KM` in settings.
 
 ## Frontend architecture
 
@@ -125,8 +127,14 @@ router, switched in `src/App.jsx`:
 - `interior` → `Dashboard` (garage interior + vehicle + interactive nodes)
 
 `react-router-dom` is installed but not yet used; the plan is to introduce it for 2D detail pages while
-`appState` keeps driving the 3D lobby. Other store fields: `isLoggedIn`, `isUnlocked` (`unlockGarage`),
-`selectedNode` (`setSelectedNode`, drives the sidebar).
+`appState` keeps driving the 3D lobby. Other store fields: `isLoggedIn`/`logIn`, `logOut` (full reset to
+the exterior, used on logout), `isUnlocked` (`unlockGarage`), `selectedNode` (`setSelectedNode`),
+`activeVehicleId`.
+
+**Session skip-login**: `App.jsx` calls `useMe()`; a valid Django session (me != null) with `!isUnlocked`
+jumps straight to `interior`, bypassing the intro + padlock. The `!isUnlocked` guard is load-bearing — it
+keeps the fresh-login door-opening cinematic (which sets `isUnlocked` first) from being short-circuited.
+Logout is a top-right dashboard button: `useLogout` (server) + store `logOut` (reset to exterior).
 
 ### Scripted transition sequence
 A chain of timers and state flips spread across components — trace all of these when touching timing:

@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import GarageInterior from '../components/canvas/GarageInterior';
 import DashboardSidebar from '../components/ui/DashboardSidebar';
 import RecordsPanel from '../components/records/RecordsPanel';
 import AnalyticsPanel from '../components/analytics/AnalyticsPanel';
 import VehiclesPanel from '../components/vehicles/VehiclesPanel';
 import { useActiveVehicle, useVehicleSummary } from '../api/vehicles';
+import { useRunReminders } from '../api/reminders';
+import { useLogout } from '../api/auth';
 import { useAppStore } from '../store/useAppStore';
 
 export default function Dashboard() {
@@ -14,7 +16,16 @@ export default function Dashboard() {
   const [showVehicles, setShowVehicles] = useState(false);
   const { vehicle, vehicles } = useActiveVehicle();
   const setActiveVehicleId = useAppStore((s) => s.setActiveVehicleId);
+  const logOut = useAppStore((s) => s.logOut);
   const { data: summary } = useVehicleSummary(vehicle?.id);
+  const runReminders = useRunReminders();
+  const logout = useLogout();
+
+  // No cron locally — refresh reminders (and send any due emails) once on entry.
+  const { mutate: runRemindersMutate } = runReminders;
+  useEffect(() => { runRemindersMutate(); }, [runRemindersMutate]);
+
+  const onLogout = () => logout.mutate(undefined, { onSuccess: logOut });
 
   const title = vehicle ? `${vehicle.make} ${vehicle.model}` : 'Your Garage';
   const odometer = summary?.current_odometer ?? vehicle?.current_odometer ?? 0;
@@ -22,6 +33,15 @@ export default function Dashboard() {
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden font-sans">
       <GarageInterior />
+
+      {/* Log out (top-right) */}
+      <button
+        onClick={onLogout}
+        disabled={logout.isPending}
+        className="absolute top-6 right-6 z-10 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded backdrop-blur border border-white/20 transition-colors pointer-events-auto text-sm disabled:opacity-50"
+      >
+        {logout.isPending ? 'Logging out…' : 'Log out'}
+      </button>
 
       {/* 2D HUD Overlays — backed by the real vehicle summary */}
       {showHUD && (

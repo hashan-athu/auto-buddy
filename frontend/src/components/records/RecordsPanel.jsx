@@ -13,7 +13,9 @@ import {
 import {
   useDocuments, useUploadDocument, useUpdateDocument, useDeleteDocument, DOCUMENT_TYPES,
 } from '../../api/documents';
-import { useReminders, useAddReminder, useUpdateReminder, useDeleteReminder } from '../../api/reminders';
+import {
+  useReminders, useAddReminder, useUpdateReminder, useDeleteReminder, useRunReminders,
+} from '../../api/reminders';
 
 const TABS = ['Overview', 'Running', 'Fuel', 'Maintenance', 'Documents', 'Reminders'];
 const today = () => new Date().toISOString().slice(0, 10);
@@ -433,6 +435,7 @@ function RemindersTab({ vehicleId }) {
   const add = useAddReminder(vehicleId);
   const update = useUpdateReminder(vehicleId);
   const del = useDeleteReminder(vehicleId);
+  const run = useRunReminders();
   const [form, setForm] = useState({ title: '', due_date: '' });
 
   const submit = (e) => {
@@ -453,6 +456,15 @@ function RemindersTab({ vehicleId }) {
 
   return (
     <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-500">
+          Auto-generated from document expiry &amp; service due dates.
+        </p>
+        <button onClick={() => run.mutate()} disabled={run.isPending}
+          className="text-xs px-3 py-1.5 rounded border border-white/20 text-gray-300 hover:bg-white/10 transition-colors disabled:opacity-50">
+          {run.isPending ? 'Checking…' : run.isSuccess ? 'Checked ✓' : 'Check now'}
+        </button>
+      </div>
       <form onSubmit={submit} className="grid grid-cols-3 gap-3 items-end">
         <div className="col-span-2">
           <Field label="Reminder">
