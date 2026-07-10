@@ -1,0 +1,142 @@
+# Auto Buddy — Roadmap & Architecture Plan
+
+The durable, in-repo copy of the plan. The rendered version lives as a Claude Artifact:
+<https://claude.ai/code/artifact/142d566e-7175-4240-9545-f0c9cb16140a>. If the two ever disagree,
+**this file wins** — update it as the plan evolves.
+
+## Vision
+
+A virtual-garage personal auto-management platform. The 3D garage is the front door (an NFS-lobby feel,
+not a traditional dashboard); every record, log, document, and cost lives behind the car it belongs to.
+The 3D world is the lobby; data-heavy work happens in focused 2D panels over it.
+
+**Scope:** personal now, structured to become multi-user (SaaS) without a rewrite.
+**Surface:** web, desktop-first.
+**Model:** hybrid — 3D lobby + 2D detail.
+
+> **Deployment scope (as of 2026-07-10): localhost-only.** We are not deploying yet, so production concerns
+> are explicitly out of scope for now: hosting/CI, HTTPS/prod security settings, Postgres (SQLite is fine),
+> S3 (local file storage is fine), PWA/offline, and SaaS onboarding/billing/multi-tenant hardening. The
+> owner-scoping stays (it's just correctness). Env switches for Postgres/S3 already exist, so none of this
+> blocks a future flip to production. Current focus is the post-roadmap backlog below.
+
+## Stack
+
+| Layer | Choice |
+| :-- | :-- |
+| Backend | Django + DRF, PostgreSQL (SQLite in dev via `DATABASE_URL`) |
+| Auth | Session cookies + CSRF, abstracted so JWT can be added for mobile later |
+| Async | Celery + Redis (start with a nightly management command) |
+| Files | django-storages → private S3, signed URLs |
+| Frontend | React + Vite, React Three Fiber + drei, Tailwind v4 |
+| Data layer | TanStack Query (server state) + Zustand (scene/UI state only) |
+| Forms/tables/charts | React Hook Form + Zod, TanStack Table, Recharts |
+| Routing | React Router for 2D pages; `appState` store for the 3D lobby |
+
+## Data model (target)
+
+Everything hangs off `Vehicle`, which hangs off `owner` — data isolation at the root of the tree.
+
+- **User** (custom, day one) → **Vehicle** (owner FK)
+- Vehicle → **Component** (tyres/brakes/battery/oil; health + `hotspot_key` for 3D)
+- Vehicle → **RunningLog** (daily odometer/distance) · **FuelEntry** (fill-ups, economy)
+- Vehicle → **MaintenanceRecord** (service history, parts/labour cost, next-due)
+- Vehicle → **Document** (insurance/registration/license/warranty/inspection; expiry)
+- Vehicle → **Reminder** (date OR odometer trigger; auto-seeded + manual)
+
+## Phases
+
+- [x] **Phase 0 — Foundations** *(done — branch `phase-0-foundations`, commit 64b13da)*
+  - Monorepo (`backend/` + `frontend/`), Django+DRF, custom User, owner-scoped Vehicle, session auth,
+    `seed_demo`, frontend data layer (TanStack Query + axios), real login, Vite proxy. Verified e2e.
+- [x] **Phase 1 — Core records (MVP)** *(done)*
+  - Backend: `logs` app (RunningLog, FuelEntry) + `maintenance` app (MaintenanceRecord), all owner/vehicle
+    -scoped via `apps.vehicles.scoping`, with `?vehicle=` filtering and admin. `GET /api/vehicles/{id}/summary/`
+    returns distance / fuel / maintenance totals + fuel economy. `seed_demo` now seeds sample records.
+  - Frontend: query/mutation hooks (`api/logs.js`, `api/maintenance.js`, `useVehicleSummary`) and a tabbed
+    Records panel (Overview / Running / Fuel / Maintenance) with lists + add forms, opened from the Dashboard
+    HUD ("Open Records"). HUD totals now come from the summary endpoint. Verified end-to-end.
+  - Deferred to later: Vehicle *edit/create* UI (API exists; admin covers it for now), React Router pages
+    (still an overlay), React Hook Form/Zod (plain controlled forms for now).
+- [x] **Phase 2 — Documents & reminders** *(done)*
+  - Backend: `documents` app (Document + owner-checked download endpoint — files never served via public
+    MEDIA) and `reminders` app (Reminder with date/odometer triggers, dedupe key, status). `run_reminders`
+    management command auto-seeds reminders from document expiry + maintenance next-due, respects dismissal,
+    and emails soon-due items (console backend in dev). `seed_demo` adds a near-expiry insurance doc.
+  - Frontend: `api/documents.js` (list/upload/download) + `api/reminders.js` (list/add/done/dismiss), and
+    Documents + Reminders tabs in the Records panel (upload form, download links, overdue highlighting,
+    done/dismiss). Verified end-to-end incl. private download through the proxy.
+  - Deferred: S3 storage (still local FileSystemStorage; download view is storage-agnostic), Celery
+    (still a cron-able command), in-file preview/thumbnails.
+- [x] **Phase 3 — The living garage** *(done)*
+  - Backend: `components` app — Component (vehicle-scoped: `hotspot_key`, category, health good/warning/
+    critical, service metadata). `seed_demo` seeds the GT-R's tyre/engine/brakes with matching health.
+  - Frontend: `scene/hotspots.js` maps `model_3d` → 3D hotspot positions + `HEALTH_COLORS`; `VehicleModel`
+    merges those positions with live Component records by `hotspot_key` and colours each dot by health;
+    clicking opens the sidebar with the real component data. Editing a component's health recolours the world.
+  - Multi-vehicle: `activeVehicleId` in the store + `useActiveVehicle()`; a switcher appears in the HUD once
+    there's more than one car (Dashboard, RecordsPanel, hotspots all follow the active vehicle).
+  - Cinematic gated: intro is skipped on return visits (localStorage) and has a Skip button.
+  - Deferred: a true 3D car-select carousel + camera choreography (switcher is 2D for now); auto-deriving
+    health from wear/service history (currently an explicit field); the old `window.toggleDebug` node-tuner
+    was removed (positions now live in `scene/hotspots.js`).
+- [x] **Phase 4 — Analytics & hardening** *(done)*
+  - Backend: `analytics` app (view-only) — `GET /api/vehicles/{id}/analytics/` returns cost of ownership
+    (total, per-km, per-month), a 12-month fuel-vs-maintenance spend series, a fuel-economy series, a health
+    score (0–100 + status) from components, and reminder open/overdue counts.
+  - Frontend: `AnalyticsPanel` (opened from the HUD) with cost-of-ownership tiles, a stacked monthly-spend
+    bar chart, a health-score ring + component breakdown, and a fuel-economy sparkline. Charts are
+    self-contained SVG; the categorical fuel/maintenance palette was run through the dataviz validator
+    (blue #3392d0 / orange #c96a1c — CVD ΔE ~90, in-band on the dark surface).
+  - Hardening: lint is now green project-wide (added `eslint-plugin-react`'s `jsx-uses-vars` to clear the
+    `<motion.div>` false-positives; fixed the real pre-existing prototype errors — unused imports and a
+    `Math.random()`-in-render purity bug). Deleted the vestigial `MOCK_DATA`/`const.js`.
+  - Deliberately deferred (speculative until multi-user): PWA/offline, JS code-splitting perf pass, SaaS
+    onboarding + billing hooks. A true 3D car-select carousel also remains future work.
+
+**All roadmap phases (0–4) are complete.** The PR for `phase-0-foundations` is open (#1).
+
+## Post-roadmap backlog (localhost-only)
+
+The app is feature-complete per the phase plan but is **append-only from the UI** — the API has full CRUD,
+the frontend mostly only creates and lists. Prioritised:
+
+- [x] **A — Close the CRUD loop** *(done)*
+  - Edit + delete for running logs, fuel, maintenance, documents (row actions in the Records panel); delete
+    reminders. Backend already had full CRUD — this was all frontend hooks + UI.
+  - Add/edit/delete your own vehicles from a new "Garage" panel (`VehiclesPanel`), with active-vehicle select.
+  - Manage components from the hotspot sidebar: `DashboardSidebar` reads live component data and can edit
+    health/service (recolours the hotspot) or create a component where none exists — the "edit a record →
+    the 3D world recolours" loop is now two-directional in the UI.
+- [x] **B — Daily-use flow** *(done)*
+  - `App` wires `useMe`: a valid Django session skips the intro + padlock and lands you straight in the
+    garage (the `!isUnlocked` guard preserves the fresh-login door cinematic).
+  - Logout button (top-right of the dashboard) → `useLogout` + a store `logOut` reset back to the exterior.
+  - Reminder engine extracted to `apps/reminders/engine.py`; `POST /api/reminders/run/` runs it scoped to
+    the user's vehicles. The dashboard runs it once on entry, and the Reminders tab has a "Check now" button.
+- [ ] **C — Nice-to-haves**
+  - [x] Backend tests — `python manage.py test` (28 tests: owner-scoping, reminder engine, analytics/summary
+    math, document privacy). Frontend tests still none.
+  - [ ] True 3D car-select carousel (2D switcher covers it for now).
+  - [x] Code-split the three.js chunk — `Landing`/`Dashboard` are `React.lazy`, so three.js/R3F (~955 kB /
+    257 kB gzip) is now an async chunk that loads during the intro instead of blocking first paint. Initial
+    JS dropped from ~1,472 kB to ~398 kB.
+
+**Out of scope while localhost-only:** deployment/CI, Postgres/S3, PWA, SaaS onboarding/billing (see the
+Deployment scope note up top).
+
+## Key decisions (hold the line on these)
+
+- Server state → TanStack Query; Zustand only for ephemeral scene/UI state.
+- Owner-scope **every** queryset from day one (`owner == request.user`).
+- Store canonical units (metric, litres); format in the UI. Currency field per vehicle.
+- 3D hotspot layout is frontend config (model-specific, hand-tuned); hotspot *state* comes from the API.
+- Reminders have two clocks: date-based and odometer-based (reads latest RunningLog).
+- Documents are always private — signed, short-lived URLs, never a public bucket.
+
+## Open questions (revisit as phases land)
+
+- Notification channels beyond email (browser/PWA push? SMS for critical expiries?).
+- 3D model sourcing for arbitrary user cars if going SaaS (curated library + generic fallback for now).
+- One garage scene with multiple cars staged vs. one-at-a-time + select carousel (leaning one-at-a-time).
+- How aggressive to be with automation (suggest service intervals from make/model/mileage, or track-only?).
