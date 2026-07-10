@@ -96,7 +96,15 @@ Everything below lives under `frontend/src/`.
 - `main.jsx` wraps `<App>` in `QueryClientProvider`.
 - **Records surface**: `components/records/RecordsPanel.jsx` is a tabbed slide-in (Overview/Running/Fuel/
   Maintenance/Documents/Reminders) opened from the Dashboard "Open Records" button; hooks in `api/logs.js`,
-  `api/maintenance.js`, `api/documents.js`, `api/reminders.js`.
+  `api/maintenance.js`, `api/documents.js`, `api/reminders.js`. Each tab now does full CRUD: an `editing`
+  state prefills the add-form for edits, and `DataTable` rows carry edit/delete actions (delete uses a
+  `window.confirm`). Document edits are metadata-only (PATCH, no re-upload).
+- **Vehicle management**: `components/vehicles/VehiclesPanel.jsx` (Dashboard "Garage" button) does
+  vehicle add/edit/delete + active-vehicle select; write hooks in `api/vehicles.js`. The 3D-model picker is
+  sourced from `HOTSPOT_LAYOUTS` keys.
+- **Component editing lives in the sidebar**: `DashboardSidebar` reads the *live* component list (not the
+  click-time snapshot) so edits reflect immediately, and can create a component for a hotspot that has none.
+  Editing health re-colours the 3D dot. Hooks in `api/components.js`.
   Add-forms are plain controlled `useState` (matching the existing style — not React Hook Form yet).
   Mutations invalidate the relevant list plus `['vehicle-summary', id]` so totals refresh.
 - **Analytics**: `components/analytics/AnalyticsPanel.jsx` (opened from the HUD "Analytics" button) reads

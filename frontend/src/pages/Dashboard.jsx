@@ -3,6 +3,7 @@ import GarageInterior from '../components/canvas/GarageInterior';
 import DashboardSidebar from '../components/ui/DashboardSidebar';
 import RecordsPanel from '../components/records/RecordsPanel';
 import AnalyticsPanel from '../components/analytics/AnalyticsPanel';
+import VehiclesPanel from '../components/vehicles/VehiclesPanel';
 import { useActiveVehicle, useVehicleSummary } from '../api/vehicles';
 import { useAppStore } from '../store/useAppStore';
 
@@ -10,6 +11,7 @@ export default function Dashboard() {
   const [showHUD, setShowHUD] = useState(true);
   const [showRecords, setShowRecords] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showVehicles, setShowVehicles] = useState(false);
   const { vehicle, vehicles } = useActiveVehicle();
   const setActiveVehicleId = useAppStore((s) => s.setActiveVehicleId);
   const { data: summary } = useVehicleSummary(vehicle?.id);
@@ -62,6 +64,12 @@ export default function Dashboard() {
           Analytics
         </button>
         <button
+          onClick={() => setShowVehicles(true)}
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded backdrop-blur border border-white/20 transition-colors pointer-events-auto text-sm"
+        >
+          Garage
+        </button>
+        <button
           onClick={() => setShowHUD(!showHUD)}
           className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded backdrop-blur border border-white/20 transition-colors pointer-events-auto text-sm"
         >
@@ -78,6 +86,8 @@ export default function Dashboard() {
       {showAnalytics && vehicle && (
         <AnalyticsPanel vehicleId={vehicle.id} onClose={() => setShowAnalytics(false)} />
       )}
+
+      {showVehicles && <VehiclesPanel onClose={() => setShowVehicles(false)} />}
     </div>
   );
 }

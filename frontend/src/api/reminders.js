@@ -36,3 +36,13 @@ export function useUpdateReminder(vehicleId) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['reminders', vehicleId] }),
   });
 }
+
+export function useDeleteReminder(vehicleId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id) => {
+      await api.delete(`/reminders/${id}/`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['reminders', vehicleId] }),
+  });
+}

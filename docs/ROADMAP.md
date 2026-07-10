@@ -14,6 +14,12 @@ The 3D world is the lobby; data-heavy work happens in focused 2D panels over it.
 **Surface:** web, desktop-first.
 **Model:** hybrid — 3D lobby + 2D detail.
 
+> **Deployment scope (as of 2026-07-10): localhost-only.** We are not deploying yet, so production concerns
+> are explicitly out of scope for now: hosting/CI, HTTPS/prod security settings, Postgres (SQLite is fine),
+> S3 (local file storage is fine), PWA/offline, and SaaS onboarding/billing/multi-tenant hardening. The
+> owner-scoping stays (it's just correctness). Env switches for Postgres/S3 already exist, so none of this
+> blocks a future flip to production. Current focus is the post-roadmap backlog below.
+
 ## Stack
 
 | Layer | Choice |
@@ -88,8 +94,30 @@ Everything hangs off `Vehicle`, which hangs off `owner` — data isolation at th
   - Deliberately deferred (speculative until multi-user): PWA/offline, JS code-splitting perf pass, SaaS
     onboarding + billing hooks. A true 3D car-select carousel also remains future work.
 
-**All roadmap phases (0–4) are complete.** Remaining work is the deferred items above plus opening/merging
-the PR for the `phase-0-foundations` branch.
+**All roadmap phases (0–4) are complete.** The PR for `phase-0-foundations` is open (#1).
+
+## Post-roadmap backlog (localhost-only)
+
+The app is feature-complete per the phase plan but is **append-only from the UI** — the API has full CRUD,
+the frontend mostly only creates and lists. Prioritised:
+
+- [x] **A — Close the CRUD loop** *(done)*
+  - Edit + delete for running logs, fuel, maintenance, documents (row actions in the Records panel); delete
+    reminders. Backend already had full CRUD — this was all frontend hooks + UI.
+  - Add/edit/delete your own vehicles from a new "Garage" panel (`VehiclesPanel`), with active-vehicle select.
+  - Manage components from the hotspot sidebar: `DashboardSidebar` reads live component data and can edit
+    health/service (recolours the hotspot) or create a component where none exists — the "edit a record →
+    the 3D world recolours" loop is now two-directional in the UI.
+- [ ] **B — Daily-use flow**
+  - Skip login when the Django session is still valid (`useMe` exists but isn't wired — you log in every launch).
+  - Logout button (`useLogout` hook exists, unwired).
+  - Trigger `run_reminders` without the terminal (a "check now" button / run-on-login) — no cron locally.
+- [ ] **C — Nice-to-haves**
+  - True 3D car-select carousel (2D switcher covers it for now); tests (none yet); code-split the ~1.4 MB
+    three.js chunk.
+
+**Out of scope while localhost-only:** deployment/CI, Postgres/S3, PWA, SaaS onboarding/billing (see the
+Deployment scope note up top).
 
 ## Key decisions (hold the line on these)
 

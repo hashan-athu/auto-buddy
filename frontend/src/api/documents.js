@@ -43,3 +43,31 @@ export function useUploadDocument(vehicleId) {
     },
   });
 }
+
+// Metadata-only edit (PATCH); no re-upload. To replace the file, delete + re-add.
+export function useUpdateDocument(vehicleId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...patch }) => {
+      const { data } = await api.patch(`/documents/${id}/`, patch);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['documents', vehicleId] });
+      qc.invalidateQueries({ queryKey: ['reminders', vehicleId] });
+    },
+  });
+}
+
+export function useDeleteDocument(vehicleId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id) => {
+      await api.delete(`/documents/${id}/`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['documents', vehicleId] });
+      qc.invalidateQueries({ queryKey: ['reminders', vehicleId] });
+    },
+  });
+}
