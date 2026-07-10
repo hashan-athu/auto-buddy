@@ -118,7 +118,9 @@ the frontend mostly only creates and lists. Prioritised:
   - [x] Backend tests — `python manage.py test` (28 tests: owner-scoping, reminder engine, analytics/summary
     math, document privacy). Frontend tests still none.
   - [ ] True 3D car-select carousel (2D switcher covers it for now).
-  - [ ] Code-split the ~1.4 MB three.js chunk.
+  - [x] Code-split the three.js chunk — `Landing`/`Dashboard` are `React.lazy`, so three.js/R3F (~955 kB /
+    257 kB gzip) is now an async chunk that loads during the intro instead of blocking first paint. Initial
+    JS dropped from ~1,472 kB to ~398 kB.
 
 **Out of scope while localhost-only:** deployment/CI, Postgres/S3, PWA, SaaS onboarding/billing (see the
 Deployment scope note up top).

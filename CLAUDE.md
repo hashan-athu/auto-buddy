@@ -128,6 +128,11 @@ router, switched in `src/App.jsx`:
 - `exterior` → `Landing` (garage exterior + login/unlock flow)
 - `interior` → `Dashboard` (garage interior + vehicle + interactive nodes)
 
+`Landing` and `Dashboard` are `React.lazy` (dynamic import) in `App.jsx`, wrapped in `<Suspense fallback={null}>`
+— this splits three.js/R3F into an async chunk (~955 kB) that loads during the eager intro instead of blocking
+first paint. Keep them lazy; `LoadingAwakening` stays eager (it's framer-only, no three). `build.chunkSizeWarningLimit`
+is raised to 1000 in `vite.config.js` because that three chunk is a deliberate, expected async vendor bundle.
+
 `react-router-dom` is installed but not yet used; the plan is to introduce it for 2D detail pages while
 `appState` keeps driving the 3D lobby. Other store fields: `isLoggedIn`/`logIn`, `logOut` (full reset to
 the exterior, used on logout), `isUnlocked` (`unlockGarage`), `selectedNode` (`setSelectedNode`),

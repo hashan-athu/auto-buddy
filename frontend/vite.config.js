@@ -6,6 +6,12 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   assetsInclude: ['**/*.glb'],
+  build: {
+    // three.js/R3F is one large vendor lib, deliberately code-split into its own
+    // async chunk (loaded lazily with the scene pages), so the >500 kB default
+    // warning about it is expected rather than actionable.
+    chunkSizeWarningLimit: 1000,
+  },
   server: {
     // Proxy API + admin to the Django dev server so the browser sees a single
     // origin — session and CSRF cookies just work, no CORS dance.
