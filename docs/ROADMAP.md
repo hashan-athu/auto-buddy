@@ -74,9 +74,22 @@ Everything hangs off `Vehicle`, which hangs off `owner` — data isolation at th
   - Deferred: a true 3D car-select carousel + camera choreography (switcher is 2D for now); auto-deriving
     health from wear/service history (currently an explicit field); the old `window.toggleDebug` node-tuner
     was removed (positions now live in `scene/hotspots.js`).
-- [ ] **Phase 4 — Analytics & hardening**
-  - Dashboards (cost of ownership, health scoring, trends). Performance pass, responsive/PWA groundwork.
-    SaaS-readiness (onboarding, per-user hardening, billing hooks) when/if going multi-user.
+- [x] **Phase 4 — Analytics & hardening** *(done)*
+  - Backend: `analytics` app (view-only) — `GET /api/vehicles/{id}/analytics/` returns cost of ownership
+    (total, per-km, per-month), a 12-month fuel-vs-maintenance spend series, a fuel-economy series, a health
+    score (0–100 + status) from components, and reminder open/overdue counts.
+  - Frontend: `AnalyticsPanel` (opened from the HUD) with cost-of-ownership tiles, a stacked monthly-spend
+    bar chart, a health-score ring + component breakdown, and a fuel-economy sparkline. Charts are
+    self-contained SVG; the categorical fuel/maintenance palette was run through the dataviz validator
+    (blue #3392d0 / orange #c96a1c — CVD ΔE ~90, in-band on the dark surface).
+  - Hardening: lint is now green project-wide (added `eslint-plugin-react`'s `jsx-uses-vars` to clear the
+    `<motion.div>` false-positives; fixed the real pre-existing prototype errors — unused imports and a
+    `Math.random()`-in-render purity bug). Deleted the vestigial `MOCK_DATA`/`const.js`.
+  - Deliberately deferred (speculative until multi-user): PWA/offline, JS code-splitting perf pass, SaaS
+    onboarding + billing hooks. A true 3D car-select carousel also remains future work.
+
+**All roadmap phases (0–4) are complete.** Remaining work is the deferred items above plus opening/merging
+the PR for the `phase-0-foundations` branch.
 
 ## Key decisions (hold the line on these)
 

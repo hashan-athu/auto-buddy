@@ -2,18 +2,19 @@ import React, { useState } from 'react';
 import GarageInterior from '../components/canvas/GarageInterior';
 import DashboardSidebar from '../components/ui/DashboardSidebar';
 import RecordsPanel from '../components/records/RecordsPanel';
-import { MOCK_DATA } from '../constants/const';
+import AnalyticsPanel from '../components/analytics/AnalyticsPanel';
 import { useActiveVehicle, useVehicleSummary } from '../api/vehicles';
 import { useAppStore } from '../store/useAppStore';
 
 export default function Dashboard() {
   const [showHUD, setShowHUD] = useState(true);
   const [showRecords, setShowRecords] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const { vehicle, vehicles } = useActiveVehicle();
   const setActiveVehicleId = useAppStore((s) => s.setActiveVehicleId);
   const { data: summary } = useVehicleSummary(vehicle?.id);
 
-  const title = vehicle ? `${vehicle.make} ${vehicle.model}` : MOCK_DATA.vehicle.model;
+  const title = vehicle ? `${vehicle.make} ${vehicle.model}` : 'Your Garage';
   const odometer = summary?.current_odometer ?? vehicle?.current_odometer ?? 0;
 
   return (
@@ -55,6 +56,12 @@ export default function Dashboard() {
           Open Records
         </button>
         <button
+          onClick={() => setShowAnalytics(true)}
+          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded backdrop-blur border border-white/20 transition-colors pointer-events-auto text-sm"
+        >
+          Analytics
+        </button>
+        <button
           onClick={() => setShowHUD(!showHUD)}
           className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded backdrop-blur border border-white/20 transition-colors pointer-events-auto text-sm"
         >
@@ -66,6 +73,10 @@ export default function Dashboard() {
 
       {showRecords && vehicle && (
         <RecordsPanel vehicleId={vehicle.id} onClose={() => setShowRecords(false)} />
+      )}
+
+      {showAnalytics && vehicle && (
+        <AnalyticsPanel vehicleId={vehicle.id} onClose={() => setShowAnalytics(false)} />
       )}
     </div>
   );

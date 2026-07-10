@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import LoadingAwakening from './components/canvas/LoadingAwakening';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';

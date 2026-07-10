@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, Suspense, useMemo } from 'react';
+import React, { useRef, useState, useEffect, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Html, useCursor, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
@@ -68,8 +68,13 @@ function Padlock({ onPadlockClick, isUnlocked }) {
   const [hovered, setHovered] = useState(false);
   const padlockRef = useRef();
   const velocity = useRef(new THREE.Vector3(0, 0, 0));
-  const rotationVel = useRef(new THREE.Vector3(Math.random(), Math.random(), Math.random()));
-  
+  // Randomised tumble for the fall animation, seeded once on mount (kept off the
+  // render path so the component stays pure).
+  const rotationVel = useRef(new THREE.Vector3(0, 0, 0));
+  useEffect(() => {
+    rotationVel.current.set(Math.random(), Math.random(), Math.random());
+  }, []);
+
   useCursor(hovered);
 
   useFrame((state, delta) => {

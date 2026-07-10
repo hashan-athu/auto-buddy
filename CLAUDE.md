@@ -19,7 +19,7 @@ auto-buddy/
 
 The frontend is a pure client; the backend is an API plus the Django admin. They deploy independently.
 
-### Build status: Phases 0–3 done
+### Build status: Phases 0–4 done (roadmap complete)
 Phase 0 (foundations): custom `User`, owner-scoped `Vehicle`, session auth, frontend data layer.
 Phase 1 (core records): `logs` (RunningLog, FuelEntry) and `maintenance` (MaintenanceRecord) apps, a vehicle
 `summary` endpoint, and a 2D Records panel.
@@ -27,6 +27,8 @@ Phase 2 (documents & reminders): `documents` (private Document + owner-checked d
 (Reminder + `run_reminders` engine that emails soon-due items) apps, plus Documents/Reminders tabs.
 Phase 3 (living garage): `components` app (Component with health) drives the 3D hotspots; multi-vehicle
 active-vehicle switching; skippable intro.
+Phase 4 (analytics & hardening): `analytics` app (view-only aggregation) + an `AnalyticsPanel` with SVG
+charts; lint is green project-wide; `MOCK_DATA`/`const.js` deleted.
 The old hardcoded login (`admin`/`password123`) is gone — auth hits the API, HUD totals come from the
 summary endpoint, and the 3D hotspots come from Component records. `MOCK_DATA` in
 `frontend/src/constants/const.js` is now vestigial (only a vehicle-name fallback) — safe to remove later.
@@ -43,8 +45,8 @@ summary endpoint, and the 3D hotspots come from Component records. `MOCK_DATA` i
 **Frontend** (from `frontend/`):
 - `npm run dev` — Vite dev server (proxies `/api`, `/admin`, `/static` to Django — see `vite.config.js`)
 - `npm run build` / `npm run preview`
-- `npm run lint` — ESLint (flat config). Note: the 3D prototype files carry pre-existing lint errors
-  (unused `motion`/`useRef` imports); don't assume a red lint is your change.
+- `npm run lint` — ESLint (flat config); currently green across the whole project. The config includes
+  `eslint-plugin-react`'s `jsx-uses-vars` so member-expression JSX like `<motion.div>` isn't false-flagged.
 
 Run both dev servers together; the browser sees a single origin via the Vite proxy, so session + CSRF
 cookies work without CORS friction. No automated tests are configured yet.
@@ -97,6 +99,11 @@ Everything below lives under `frontend/src/`.
   `api/maintenance.js`, `api/documents.js`, `api/reminders.js`.
   Add-forms are plain controlled `useState` (matching the existing style — not React Hook Form yet).
   Mutations invalidate the relevant list plus `['vehicle-summary', id]` so totals refresh.
+- **Analytics**: `components/analytics/AnalyticsPanel.jsx` (opened from the HUD "Analytics" button) reads
+  `GET /api/vehicles/{id}/analytics/` via `api/analytics.js` and renders self-contained SVG charts (stacked
+  monthly-spend bars, health-score ring, economy sparkline). The categorical chart palette
+  (fuel `#3392d0` / maintenance `#c96a1c`) was validated with the dataviz skill — keep both in the lightness
+  band and CVD-separated if you change them.
 
 Note: the ESLint flat config lacks `eslint-plugin-react`, so `jsx-uses-vars` doesn't fire — lowercase
 identifiers used only as member-expression JSX (e.g. `motion` in `<motion.div>`) are false-flagged as unused

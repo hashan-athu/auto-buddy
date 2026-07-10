@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "apps.documents",
     "apps.reminders",
     "apps.components",
+    "apps.analytics",
 ]
 
 MIDDLEWARE = [
